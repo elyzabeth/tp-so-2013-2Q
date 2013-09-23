@@ -14,6 +14,10 @@ int main (int argc, char**argv) {
 	if (strcmp(argv[1], "-test")==0)
 		return correrTest();
 
+	inicializar ();
+	principal ();
+	finalizar ();
+
 	return EXIT_SUCCESS;
 }
 
@@ -34,3 +38,8 @@ void finalizar () {
 	destruirConfigNivel();
 	log_destroy(LOGGER);
 }
+
+void principal () {
+
+}
+
