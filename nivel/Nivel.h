@@ -10,16 +10,25 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <curses.h>
 
 #include "commons/log.h"
+#include <commons/collections/list.h>
+
 #include "cunitTest/cUnitSuiteNivel.h"
 #include "config/configNivel.h"
+#include "tad_items.h"
+
 
 t_log* LOGGER;
 char NOMBRENIVEL[20+1];
 
 int correrTest();
+void principal ();
+
 void inicializar ();
 void finalizar ();
+
+void rnd(int *x, int max);
 
 #endif /* NIVEL_H_ */

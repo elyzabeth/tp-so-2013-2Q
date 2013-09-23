@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>nivel</name>
+	<name>nivel-gui</name>
 	<comment></comment>
 	<projects>
 		<project>so-commons-library</project>
-		<project>nivel-gui</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
