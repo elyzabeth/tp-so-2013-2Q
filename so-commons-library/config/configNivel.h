@@ -2,7 +2,7 @@
  * configNivel.h
  *
  *  Created on: Sep 19, 2013
- *      Author: elizabeth
+ *      Author: elyzabeth
  */
 
 #ifndef CONFIGNIVEL_H_
@@ -16,10 +16,10 @@
 #include "../commons/string.h"
 #include "../commons/log.h"
 #include "../commons/collections/dictionary.h"
+
 #include "funciones.h"
 
-#define PATH_CONFIG_NIVEL "./nivel.conf"
-#define MAXCHARLEN 200
+
 #define MAXCANTCAJAS 50 // Cantidad maxima de cajas de recursos por nivel
 
 typedef struct {

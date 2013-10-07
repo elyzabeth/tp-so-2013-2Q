@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <curses.h>
+#include <pthread.h>
 
 #include "commons/comunicacion.h"
 #include "config/configPlataforma.h"
@@ -21,9 +22,13 @@ typedef struct config_plataforma_s
 
 t_log* LOGGER;
 int32_t PUERTO;
+config_plataforma_t plataforma;
 
 void inicializarPlataforma();
 void finalizarPlataforma();
+
+void* orquestador(void *parametro);
+void nuevoPersonaje(int fdPersonaje);
 
 void plat_signal_callback_handler(int signum);
 

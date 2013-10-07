@@ -14,7 +14,7 @@
 #include "commons/log.h"
 #include "config/configNivel.h"
 
-#include "../Nivel.h"
+#include "../NivelMain.h"
 
 void testNivel01 ();
 int suiteNivel ();

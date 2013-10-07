@@ -9,7 +9,7 @@
 
 void testNivel01 () {
 	printf("Soy testNivel01 y pruebo que xxxxxxxxx sea igual a xxxxxxxxxx: ");
-	inicializar();
+	inicializarNivel();
 	CU_ASSERT_STRING_EQUAL(configNivelNombre(), "nivel1");
 }
 
@@ -37,7 +37,7 @@ int suiteNivel () {
 	CU_basic_run_tests();
 	CU_cleanup_registry();
 
-	finalizar();
+	finalizarNivel();
 
 	return CU_get_error();
 }

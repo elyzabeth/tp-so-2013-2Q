@@ -13,22 +13,21 @@
 #include <string.h>
 
 #include "../commons/config.h"
+#include "../commons/log.h"
 
-#define PATH_CONFIG_PLATAFORMA "./plataforma.conf"
-#define MAXCHARLEN 200
-
-
+#include "funciones.h"
 
 
 // DECLARACION DE FUNCIONES
 
 void levantarArchivoConfiguracionPlataforma();
-
+void destruirConfigPlataforma();
 
 int32_t configPlatPuerto ();
-char* configPlatKoopa ();
-char* configPlatScript ();
-char* configPlatPathLog ();
-char* configPlatNivelLog ();
+const char* configPlatKoopa ();
+const char* configPlatScript ();
+char* configPlatLogPath ();
+t_log_level configPlatLogNivel ();
+int32_t configPlatLogConsola ();
 
 #endif /* CONFIGPLATAFORMA_H_ */
