@@ -11,12 +11,14 @@
 #include "config/configPlataforma.h"
 #include "commons/log.h"
 #include <commons/collections/list.h>
+#include "tads/tad_personaje.h"
 
 typedef struct config_plataforma_s
 {
   //char id[LARGOID];
   char nombre [10];
   char cantidad_conexiones; /*igual a cantidad de personajes?????*/
+  char personajes_en_juego;
 
 }config_plataforma_t;
 

@@ -124,7 +124,7 @@ printf("HilosIot a crear %d\n", configPP.hilosIot);
 				if(se_desconecto)
 				{
 					log_info(LOGGER, "Se desconecto el socket %d", i);
-					plataforma.cantidad_conexiones--;
+					plataforma.personajes_en_juego--;
 					// TODO informar al nivel para que lo borre?
 				}
 
@@ -142,13 +142,10 @@ printf("HilosIot a crear %d\n", configPP.hilosIot);
 
 }
 
-void crearPersonaje() {
-
-}
 
 void nuevoPersonaje(int fdPersonaje) {
 	header_t header;
-	plataforma.cantidad_conexiones++;
+	plataforma.personajes_en_juego++;
 
 	/**Contesto Mensaje **/
 	header.tipo=PERSONAJE_CONECTADO;
@@ -178,7 +175,7 @@ void inicializarPlataforma () {
 	log_info(LOGGER, "INICIALIZANDO Plataforma en el puerto: '%d' ", configPlatPuerto());
 
 	PUERTO = configPlatPuerto();
-	plataforma.cantidad_conexiones=0;
+	plataforma.personajes_en_juego=0;
 	buffer_header = malloc(sizeof(header_t));
 }
 
