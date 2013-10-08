@@ -10,7 +10,8 @@
 #include "commons/comunicacion.h"
 #include "config/configPlataforma.h"
 #include "commons/log.h"
-#include <commons/collections/list.h>
+#include "commons/collections/list.h"
+#include "commons/collections/queue.h"
 #include "tads/tad_personaje.h"
 
 typedef struct config_plataforma_s
@@ -20,19 +21,28 @@ typedef struct config_plataforma_s
   char cantidad_conexiones; /*igual a cantidad de personajes?????*/
   char personajes_en_juego;
 
-}config_plataforma_t;
+} config_plataforma_t;
 
 t_log* LOGGER;
 int32_t PUERTO;
 config_plataforma_t plataforma;
+
+t_queue *listaPersonajesNuevos;
+
+pthread_mutex_t mutexListaPersonajesNuevos;
 
 void inicializarPlataforma();
 void finalizarPlataforma();
 
 void* orquestador(void *parametro);
 void nuevoPersonaje(int fdPersonaje);
+void nuevoNivel(int fdNivel);
 
+// señales
 void plat_signal_callback_handler(int signum);
+
+//Listas compartidas
+void agregarPersonajeNuevo(t_personaje* personaje);
 
 #endif /* plataforma_H_ */
 

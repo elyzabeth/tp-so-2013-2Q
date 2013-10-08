@@ -2,6 +2,7 @@
 
 char *buffer_header;
 pthread_t idHiloOrquestador;
+pthread_t idHilosPlanificador[100];
 
 void principal();
 
@@ -40,20 +41,6 @@ void principal() {
 	log_info(LOGGER, "Creando hilo orquestador...");
 	pthread_create (&idHiloOrquestador, NULL, (void*) orquestador, NULL);
 
-	/*
-printf("HilosIot a crear %d\n", configPP.hilosIot);
-		sleep(3);
-		for (i = 1 ; i <= configPP.hilosIot; i++)
-		{
-			sleep(1);
-			pthread_t thread_iot[i];
-
-			pthread_create(&thread_iot[i], NULL, hiloIot, NULL);
-			//pthread_join(printf("thread_iot%d",i), NULL);
-			puts("hilosIOT");
-		}
-	 */
-	/************************************************/
 
 	/***************************** LOGICA PRINCIPAL ********************************/
 
@@ -107,7 +94,13 @@ printf("HilosIot a crear %d\n", configPP.hilosIot);
 				switch (header.tipo)
 				{
 					case NUEVO_PERSONAJE:
-						nuevoPersonaje(i);
+						log_info(LOGGER, "NUEVO PERSONAJE");
+						nuevoPersonaje(nuevo_sock);
+						break;
+
+					case NUEVO_NIVEL:
+						log_info(LOGGER, "NUEVO NIVEL");
+						nuevoNivel(nuevo_sock);
 						break;
 
 					case OTRO:
@@ -124,8 +117,10 @@ printf("HilosIot a crear %d\n", configPP.hilosIot);
 				if(se_desconecto)
 				{
 					log_info(LOGGER, "Se desconecto el socket %d", i);
-					plataforma.personajes_en_juego--;
-					// TODO informar al nivel para que lo borre?
+					// TODO chequear si se desconecto personaje o nivel y borrarlo de las estructuras
+					// si es personaje informar al nivel para que lo borre?
+					// plataforma.personajes_en_juego--;
+
 				}
 
 				if ((header.tipo == CONECTAR_NIVEL) && (se_desconecto != 1))
@@ -145,7 +140,6 @@ printf("HilosIot a crear %d\n", configPP.hilosIot);
 
 void nuevoPersonaje(int fdPersonaje) {
 	header_t header;
-	plataforma.personajes_en_juego++;
 
 	/**Contesto Mensaje **/
 	header.tipo=PERSONAJE_CONECTADO;
@@ -156,12 +150,46 @@ void nuevoPersonaje(int fdPersonaje) {
 
 	if (enviar(fdPersonaje, buffer_header, sizeof(header_t)) != EXITO)
 	{
-		log_error(LOGGER, "Error al enviar header NUEVO PERSONAJE\n\n");
+		log_error(LOGGER, "Error al enviar header PERSONAJE_CONECTADO\n\n");
 	} else {
-		crearPersonaje();
+		//queue_push(listaPersonajesNuevos, crearPersonaje("MARIO", '@', 0,0, fdPersonaje));
+		// TODO quitar hardcodeo!!
+		// pedir/recibir informacion del personaje.
+		agregarPersonajeNuevo(crearPersonaje("MARIO", '@', 0, 0, fdPersonaje));
+		plataforma.personajes_en_juego++;
 	}
 }
 
+void nuevoNivel(int fdNivel) {
+	header_t header;
+	/*
+printf("HilosIot a crear %d\n", configPP.hilosIot);
+		sleep(3);
+		for (i = 1 ; i <= configPP.hilosIot; i++)
+		{
+			sleep(1);
+			pthread_t thread_iot[i];
+
+			pthread_create(&thread_iot[i], NULL, hiloIot, NULL);
+			//pthread_join(printf("thread_iot%d",i), NULL);
+			puts("hilosIOT");
+		}
+	 */
+	/************************************************/
+
+	/**Contesto Mensaje **/
+	header.tipo=NIVEL_CONECTADO;
+	header.largo_mensaje=0;
+
+	if (enviar(fdNivel, buffer_header, sizeof(header_t)) != EXITO)
+	{
+		log_error(LOGGER, "Error al enviar header NIVEL_CONECTADO\n\n");
+	} else {
+		// TODO levantar hilo Planificador para el nivel
+		// pedir/recibir informacion del nivel.
+
+	}
+}
 
 
 /**
@@ -177,6 +205,8 @@ void inicializarPlataforma () {
 	PUERTO = configPlatPuerto();
 	plataforma.personajes_en_juego=0;
 	buffer_header = malloc(sizeof(header_t));
+	listaPersonajesNuevos = queue_create();
+	pthread_mutex_init (&mutexListaPersonajesNuevos, NULL);
 }
 
 /**
@@ -185,9 +215,19 @@ void inicializarPlataforma () {
  */
 void finalizarPlataforma() {
 	log_info(LOGGER, "FINALIZANDO PLATAFORMA");
+	// Libero listas
+	queue_destroy_and_destroy_elements(listaPersonajesNuevos, (void*)free);
+	// Libero semaforos
+	pthread_mutex_destroy(&mutexListaPersonajesNuevos);
+	// Libero buffer
 	free(buffer_header);
+	// Libero estructuras de configuracion
 	destruirConfigPlataforma();
+	// Libero logger
 	log_destroy(LOGGER);
+
+	// Libero a Willy!
+	// free (Willy);
 }
 
 /*

@@ -95,6 +95,8 @@ void finalizarNivel () {
 	list_destroy_and_destroy_elements(GUIITEMS, (void*)free);
 	nivel_gui_terminar();
 
+	free(buffer_header);
+
 	log_info(LOGGER, "FINALIZANDO NIVEL '%s'", NOMBRENIVEL);
 	log_info(LOGGER, "LIBERANDO ESTRUCTURAS DE CONFIG-NIVEL '%s'", NOMBRENIVEL);
 	destruirConfigNivel();
@@ -152,6 +154,24 @@ void rnd(int *x, int max) {
 	*x = (*x>0) ? *x : 1;
 }
 
+int enviarMSJNuevoNivel(int sock) {
+	header_t header;
+	header.tipo = NUEVO_NIVEL;
+	header.largo_mensaje = 0/*TAMPRESENT*/;
+
+	buffer_header = calloc(1,sizeof(header_t)/*TAMHEADER*/); /*primera y unica vez */
+	memset(buffer_header, '\0', sizeof(header_t)/*TAMHEADER*/);
+	memcpy(buffer_header, &header, sizeof(header_t)/*TAMHEADER*/);
+
+	log_info(LOGGER, "sizeof(header): %d, largo mensaje: %d  buffer_header: %lu\n", sizeof(header), header.largo_mensaje, sizeof(&buffer_header));
+
+	if (enviar(sock, buffer_header, sizeof(header_t)) != EXITO)
+	{
+		log_error(LOGGER,"Error al enviar header NUEVO_PERSONAJE\n\n");
+		return WARNING;
+	}
+	return EXITO;
+}
 
 void ejemploGui () {
 
