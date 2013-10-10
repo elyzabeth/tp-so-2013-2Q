@@ -100,7 +100,7 @@ void principal() {
 
 					case NUEVO_NIVEL:
 						log_info(LOGGER, "NUEVO NIVEL");
-						nuevoNivel(nuevo_sock);
+						nuevoNivel(nuevo_sock, header);
 						break;
 
 					case OTRO:
@@ -160,22 +160,17 @@ void nuevoPersonaje(int fdPersonaje) {
 	}
 }
 
-void nuevoNivel(int fdNivel) {
-	header_t header;
-	/*
-printf("HilosIot a crear %d\n", configPP.hilosIot);
-		sleep(3);
-		for (i = 1 ; i <= configPP.hilosIot; i++)
-		{
-			sleep(1);
-			pthread_t thread_iot[i];
+void nuevoNivel(int fdNivel, header_t header) {
+	//header_t header;
+	char *buffer;
+	t_nivel *nivel;
 
-			pthread_create(&thread_iot[i], NULL, hiloIot, NULL);
-			//pthread_join(printf("thread_iot%d",i), NULL);
-			puts("hilosIOT");
-		}
-	 */
 	/************************************************/
+	nivel = crearNivel("", fdNivel);
+
+	buffer = calloc(header.largo_mensaje+1, sizeof(char));
+	recibir (fdNivel, buffer, header.largo_mensaje);
+	strncpy(nivel->nombre, buffer, header.largo_mensaje);
 
 	/**Contesto Mensaje **/
 	header.tipo=NIVEL_CONECTADO;
@@ -189,6 +184,20 @@ printf("HilosIot a crear %d\n", configPP.hilosIot);
 		// pedir/recibir informacion del nivel.
 
 	}
+	/*
+printf("HilosIot a crear %d\n", configPP.hilosIot);
+		sleep(3);
+		for (i = 1 ; i <= configPP.hilosIot; i++)
+		{
+			sleep(1);
+			pthread_t thread_iot[i];
+
+			pthread_create(&thread_iot[i], NULL, hiloIot, NULL);
+			//pthread_join(printf("thread_iot%d",i), NULL);
+			puts("hilosIOT");
+		}
+	 */
+	free(buffer);
 }
 
 
@@ -206,6 +215,7 @@ void inicializarPlataforma () {
 	plataforma.personajes_en_juego=0;
 	buffer_header = malloc(sizeof(header_t));
 	listaPersonajesNuevos = queue_create();
+	listaNiveles = dictionary_create();
 	pthread_mutex_init (&mutexListaPersonajesNuevos, NULL);
 }
 
@@ -217,6 +227,8 @@ void finalizarPlataforma() {
 	log_info(LOGGER, "FINALIZANDO PLATAFORMA");
 	// Libero listas
 	queue_destroy_and_destroy_elements(listaPersonajesNuevos, (void*)free);
+	dictionary_destroy_and_destroy_elements(listaNiveles, (void*)free);
+
 	// Libero semaforos
 	pthread_mutex_destroy(&mutexListaPersonajesNuevos);
 	// Libero buffer
