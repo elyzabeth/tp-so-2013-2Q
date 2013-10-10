@@ -157,7 +157,9 @@ void rnd(int *x, int max) {
 int enviarMSJNuevoNivel(int sock) {
 	header_t header;
 	header.tipo = NUEVO_NIVEL;
-	header.largo_mensaje = 0/*TAMPRESENT*/;
+	header.largo_mensaje = strlen(NOMBRENIVEL);
+	char* buffer = malloc(header.largo_mensaje+1);
+	strcpy(buffer, NOMBRENIVEL);
 
 	buffer_header = calloc(1,sizeof(header_t)/*TAMHEADER*/); /*primera y unica vez */
 	memset(buffer_header, '\0', sizeof(header_t)/*TAMHEADER*/);
@@ -167,9 +169,17 @@ int enviarMSJNuevoNivel(int sock) {
 
 	if (enviar(sock, buffer_header, sizeof(header_t)) != EXITO)
 	{
-		log_error(LOGGER,"Error al enviar header NUEVO_PERSONAJE\n\n");
+		log_error(LOGGER,"Error al enviar header NUEVO_NIVEL\n\n");
 		return WARNING;
 	}
+
+	if (enviar(sock, buffer, header.largo_mensaje) != EXITO)
+	{
+		log_error(LOGGER,"Error al enviar NOMBRE NIVEL\n\n");
+		return WARNING;
+	}
+
+	free(buffer);
 	return EXITO;
 }
 

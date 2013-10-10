@@ -13,6 +13,7 @@
 #include <curses.h>
 #include <signal.h>
 #include <unistd.h>
+#include <string.h>
 
 #include "tad_items.h"
 #include "commons/log.h"
