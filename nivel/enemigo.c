@@ -16,18 +16,16 @@ ITEM_NIVEL* _search_enemy_by_id(t_list* items, char id) {
 	return list_find(items, (void*) _search_by_id);
 }
 
-void* enemigo(void *idEnemigo) {
-	int x=211, y=135;
-	char id = ((char*)(idEnemigo))[0];
+void* enemigo(int32_t *idEnemigo) {
+	int x=10, y=15;
+	int32_t id = (int32_t) idEnemigo;
 	int32_t sleepEnemigos = configNivelSleepEnemigos();
-
-//	ITEM_NIVEL* item = _search_enemy_by_id(GUIITEMS, id);
-//	int x = item->posx;
-//	int y = item->posy;
 
 	rnd(&x, MAXCOLS);
 	rnd(&y, MAXROWS);
-	CrearEnemigo(GUIITEMS, id, x, y);
+	log_info(LOGGER, "Creo Enemigo '%c'", id);
+	//CrearEnemigo(GUIITEMS, id, x, y);
+	nivel_gui_dibujar(GUIITEMS, NOMBRENIVEL);
 
 	while (1) {
 		//TODO agregar logica del enemigo
@@ -36,7 +34,7 @@ void* enemigo(void *idEnemigo) {
 		rnd(&y, MAXROWS);
 
 		MoverPersonaje(GUIITEMS, id, x, y );
-		nivel_gui_dibujar(GUIITEMS, NOMBRENIVEL);
+		//nivel_gui_dibujar(GUIITEMS, NOMBRENIVEL);
 
 		usleep(sleepEnemigos);
 	}

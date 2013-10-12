@@ -45,26 +45,28 @@ void agregarCajasRecursos() {
 void agregarEnemigos() {
 
 	// TODO agregar los enemigos
-	//int x=211, y=135;
 	int i;
-	char idEnemigo[2]={0};
 	int32_t cantEnemigos = configNivelEnemigos();
+	int idEnemigo = '1';
 
-//	CrearEnemigo(GUIITEMS, '1', ex1, ey1);
-//	CrearEnemigo(GUIITEMS, '2', ex2, ey2);
+	int x=211, y=135;
+
 	for(i=0; i < cantEnemigos; i++) {
-		idEnemigo[0]=i+49;
-//		rnd(&x, MAXCOLS);
-//		rnd(&y, MAXROWS);
-//		log_debug(LOGGER,"(%d,%d)",x,y);
-		log_info(LOGGER, "Creo Enemigo '%s'",idEnemigo);
-		//CrearEnemigo(GUIITEMS, idEnemigo[0], x, y);
+
+		rnd(&x, MAXCOLS);
+		rnd(&y, MAXROWS);
+
+		log_info(LOGGER, "agregarEnemigos: Creo Enemigo '%c' %d",idEnemigo, idEnemigo);
+		log_debug(LOGGER,"(%d,%d)",x,y);
+		CrearEnemigo(GUIITEMS, idEnemigo, x, y);
+		rnd(&x, MAXCOLS);
+		rnd(&y, MAXROWS);
+
 
 		// Creo el hilo para el enemigo
-		pthread_create (&idHiloEnemigo[i], NULL, (void*) enemigo, (void*)idEnemigo);
+		pthread_create (&idHiloEnemigo[i], NULL, (void*) enemigo, (int32_t*)idEnemigo);
+		idEnemigo++;
 
-//		rnd(&x, MAXCOLS);
-//		rnd(&y, MAXROWS);
 	}
 
 }
@@ -79,7 +81,7 @@ void inicializarNivelGui() {
     agregarEnemigos();
     agregarCajasRecursos();
 
-   // nivel_gui_dibujar(GUIITEMS, NOMBRENIVEL);
+    nivel_gui_dibujar(GUIITEMS, NOMBRENIVEL);
 }
 
 void inicializarNivel () {
@@ -209,11 +211,12 @@ void simulacroJuego () {
 //	int ex1 = 10, ey1 = 14;
 //	int ex2 = 20, ey2 = 3;
 
+	while(1);
 	p = MAXCOLS;
 	q = MAXROWS;
 
-	CrearPersonaje(GUIITEMS, '@', p, q);
-	CrearPersonaje(GUIITEMS, '#', x, y);
+//	CrearPersonaje(GUIITEMS, '@', p, q);
+//	CrearPersonaje(GUIITEMS, '#', x, y);
 
 	nivel_gui_dibujar(GUIITEMS, NOMBRENIVEL);
 
@@ -285,8 +288,8 @@ void simulacroJuego () {
 //		MoverPersonaje(GUIITEMS, '1', ex1, ey1 );
 //		MoverPersonaje(GUIITEMS, '2', ex2, ey2 );
 
-		MoverPersonaje(GUIITEMS, '@', p, q);
-		MoverPersonaje(GUIITEMS, '#', x, y);
+//		MoverPersonaje(GUIITEMS, '@', p, q);
+//		MoverPersonaje(GUIITEMS, '#', x, y);
 
 		if (   ((p == 26) && (q == 10)) || ((x == 26) && (y == 10)) ) {
 			restarRecurso(GUIITEMS, 'H');

@@ -10,6 +10,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <pthread.h>
+#include <unistd.h>
+
 #include "commons/string.h"
 #include "commons/collections/queue.h"
 
@@ -17,13 +20,40 @@ void quitarCorchetes (char *to, char *from);
 void GenerarListaObjetivos();
 void getStringAsArray();
 
+void testHilo();
+
 int main () {
 
 	//GenerarListaObjetivos();
-	getStringAsArray();
+	//getStringAsArray();
+	testHilo();
 
 	return 0;
 }
+
+void nuevoHilo (void * param) {
+	puts("nuevoHilo: Comienza");
+
+	while (1) {
+		puts("nuevoHilo: en el while");
+		sleep(5);
+	}
+
+	pthread_exit(NULL);
+}
+
+void testHilo(){
+	pthread_t idHilo;
+
+	pthread_create(&idHilo, NULL, nuevoHilo, NULL);
+	while (1) {
+		puts("testHilo: sigo por aca");
+		sleep(1);
+	}
+
+
+}
+
 
 void getStringAsArray() {
 	char *planDeNiveles="[Nivel3,Nivel4,Nivel1]";

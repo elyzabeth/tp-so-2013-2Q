@@ -24,9 +24,9 @@
 #include "config/configNivel.h"
 #define MAXCANTENEMIGOS 50
 
-typedef struct enemigo {
-
-} t_enemigo;
+//typedef struct enemigo {
+//
+//} t_enemigo;
 
 t_log* LOGGER;
 char NOMBRENIVEL[20+1];
@@ -43,10 +43,11 @@ void principal ();
 void inicializarNivel ();
 void finalizarNivel ();
 void simulacroJuego ();
+void ejemploGui ();
 
 //hilos
 void* interbloqueo(void *parametro);
-void* enemigo(void *idEnemigo);
+void* enemigo(int *idEnemigo);
 
 // señales
 void signal_callback_handler(int signum);

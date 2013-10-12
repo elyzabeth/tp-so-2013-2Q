@@ -52,7 +52,9 @@ void principal () {
 
 		pthread_create (&idHiloInterbloqueo, NULL, (void*) interbloqueo, NULL);
 
-		simulacroJuego ();
+		while(1);
+		//simulacroJuego ();
+		//ejemploGui();
 
 		return;
 }

@@ -8,6 +8,7 @@
 #include "funcionesNivel.h"
 
 
+int32_t detectarDeadlock();
 
 void* interbloqueo(void *parametro) {
 	int32_t TiempoChequeoDeadlock;
@@ -19,9 +20,7 @@ void* interbloqueo(void *parametro) {
 	while(1) {
 		log_info(LOGGER, "Incio deteccion de interbloqueo...");
 
-		// TODO agregar algoritmo de deteccion de interbloqueo
-
-
+		hayDeadLock = detectarDeadlock();
 		if (hayDeadLock && RecoveryOn) {
 			// TODO agregar logica de recovery
 		}
@@ -31,4 +30,11 @@ void* interbloqueo(void *parametro) {
 	}
 
 	pthread_exit(NULL);
+}
+
+int32_t detectarDeadlock() {
+	int32_t hayDeadLock = 0;
+	// TODO agregar algoritmo de deteccion de interbloqueo
+
+	return hayDeadLock;
 }
