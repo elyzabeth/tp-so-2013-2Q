@@ -25,14 +25,14 @@ endif
 all: test
 
 dependents:
-	-cd /home/arwen/201302/git/tp-so-2013-2Q/so-commons-library/Debug && $(MAKE) clean all
-	-cd /home/arwen/201302/git/tp-so-2013-2Q/nivel-gui/Debug && $(MAKE) clean all
+	-cd ../../so-commons-library/Debug && $(MAKE) clean all
+	-cd ../../nivel-gui/Debug && $(MAKE) clean all
 
 # Tool invocations
-test: $(OBJS) $(USER_OBJS) /home/arwen/201302/git/tp-so-2013-2Q/so-commons-library/Debug/libso-commons-library.so /home/arwen/201302/git/tp-so-2013-2Q/nivel-gui/Debug/libnivel-gui.so
+test: $(OBJS) $(USER_OBJS) ../../so-commons-library/Debug/libso-commons-library.so ../../nivel-gui/Debug/libnivel-gui.so
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C Linker'
-	gcc -L"/home/arwen/201302/git/tp-so-2013-2Q/nivel-gui/Debug" -L"/home/arwen/201302/git/tp-so-2013-2Q/so-commons-library/Debug" -o "test" $(OBJS) $(USER_OBJS) $(LIBS)
+	gcc -L"../../nivel-gui/Debug" -L"../../so-commons-library/Debug" -o "test" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -43,7 +43,7 @@ clean:
 
 .PHONY: all clean dependents
 .SECONDARY:
-/home/arwen/201302/git/tp-so-2013-2Q/so-commons-library/Debug/libso-commons-library.so:
-/home/arwen/201302/git/tp-so-2013-2Q/nivel-gui/Debug/libnivel-gui.so:
+../../so-commons-library/Debug/libso-commons-library.so:
+../../nivel-gui/Debug/libnivel-gui.so:
 
 -include ../makefile.targets
