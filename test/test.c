@@ -15,27 +15,55 @@
 
 #include "commons/string.h"
 #include "commons/collections/queue.h"
+#include "tad_items.h"
+
+t_list* GUIITEMS;
+int MAXROWS, MAXCOLS;
 
 void quitarCorchetes (char *to, char *from);
 void GenerarListaObjetivos();
 void getStringAsArray();
 
+void nuevoHilo (void * param);
 void testHilo();
+void testNivelGui();
+
+
 
 int main () {
 
 	//GenerarListaObjetivos();
 	//getStringAsArray();
-	testHilo();
+	//testHilo();
+	testNivelGui();
 
 	return 0;
 }
 
+void testNivelGui(){
+	pthread_t idHilo;
+
+	GUIITEMS = list_create();
+
+	nivel_gui_inicializar();
+    nivel_gui_get_area_nivel(&MAXROWS, &MAXCOLS);
+    nivel_gui_dibujar(GUIITEMS, "TEST");
+
+	pthread_create(&idHilo, NULL, (void*)nuevoHilo, NULL);
+	while (1) {
+		//puts("testHilo: sigo por aca");
+		 nivel_gui_dibujar(GUIITEMS, "TEST");
+		sleep(1);
+	}
+}
+
+
 void nuevoHilo (void * param) {
-	puts("nuevoHilo: Comienza");
+	//puts("nuevoHilo: Comienza");
 
 	while (1) {
-		puts("nuevoHilo: en el while");
+		//puts("nuevoHilo: en el while");
+		nivel_gui_dibujar(GUIITEMS, "TEST");
 		sleep(5);
 	}
 
@@ -45,9 +73,9 @@ void nuevoHilo (void * param) {
 void testHilo(){
 	pthread_t idHilo;
 
-	pthread_create(&idHilo, NULL, nuevoHilo, NULL);
+	pthread_create(&idHilo, NULL, (void*)nuevoHilo, NULL);
 	while (1) {
-		puts("testHilo: sigo por aca");
+		//puts("testHilo: sigo por aca");
 		sleep(1);
 	}
 
