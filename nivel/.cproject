@@ -44,6 +44,7 @@
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="nivel-gui"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="so-commons-library"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="cunit"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="pthread"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.linker.input.1300410529" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>

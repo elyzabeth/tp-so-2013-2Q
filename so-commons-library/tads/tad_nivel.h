@@ -9,6 +9,7 @@
 #define TAD_NIVEL_H_
 
 #include <stdlib.h>
+#include <string.h>
 
 #pragma pack(1)
 typedef struct nivel {

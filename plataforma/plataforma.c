@@ -166,11 +166,12 @@ void nuevoNivel(int fdNivel, header_t header) {
 	t_nivel *nivel;
 
 	/************************************************/
-	nivel = crearNivel("", fdNivel);
-
 	buffer = calloc(header.largo_mensaje+1, sizeof(char));
 	recibir (fdNivel, buffer, header.largo_mensaje);
-	strncpy(nivel->nombre, buffer, header.largo_mensaje);
+
+	nivel = crearNivel(buffer, fdNivel);
+	//strncpy(nivel->nombre, buffer, header.largo_mensaje);
+	log_info(LOGGER, "Se conecto el Nivel: %s\n", nivel->nombre);
 
 	/**Contesto Mensaje **/
 	header.tipo=NIVEL_CONECTADO;

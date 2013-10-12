@@ -45,19 +45,26 @@ void agregarCajasRecursos() {
 void agregarEnemigos() {
 
 	// TODO agregar los enemigos
-	int x=211, y=135;
+	//int x=211, y=135;
 	int i;
+	char idEnemigo[2]={0};
 	int32_t cantEnemigos = configNivelEnemigos();
 
 //	CrearEnemigo(GUIITEMS, '1', ex1, ey1);
 //	CrearEnemigo(GUIITEMS, '2', ex2, ey2);
 	for(i=0; i < cantEnemigos; i++) {
-		rnd(&x, MAXCOLS);
-		rnd(&y, MAXROWS);
-		log_debug(LOGGER,"(%d,%d)",x,y);
-		CrearEnemigo(GUIITEMS, (char)i+49, x, y);
-		rnd(&x, MAXCOLS);
-		rnd(&y, MAXROWS);
+		idEnemigo[0]=i+49;
+//		rnd(&x, MAXCOLS);
+//		rnd(&y, MAXROWS);
+//		log_debug(LOGGER,"(%d,%d)",x,y);
+		log_info(LOGGER, "Creo Enemigo '%s'",idEnemigo);
+		//CrearEnemigo(GUIITEMS, idEnemigo[0], x, y);
+
+		// Creo el hilo para el enemigo
+		pthread_create (&idHiloEnemigo[i], NULL, (void*) enemigo, (void*)idEnemigo);
+
+//		rnd(&x, MAXCOLS);
+//		rnd(&y, MAXROWS);
 	}
 
 }
@@ -69,15 +76,19 @@ void inicializarNivelGui() {
 
 	nivel_gui_inicializar();
     nivel_gui_get_area_nivel(&MAXROWS, &MAXCOLS);
-    agregarCajasRecursos();
     agregarEnemigos();
-    nivel_gui_dibujar(GUIITEMS, NOMBRENIVEL);
+    agregarCajasRecursos();
+
+   // nivel_gui_dibujar(GUIITEMS, NOMBRENIVEL);
 }
 
 void inicializarNivel () {
+	// Levanto archivo de configuracion
 	levantarArchivoConfiguracionNivel();
-	LOGGER = log_create(configNivelLogPath(), "NIVEL", configNivelLogConsola(), configNivelLogNivel() );
 	strncpy(NOMBRENIVEL, configNivelNombre(), 20);
+
+	// Creo LOGGER
+	LOGGER = log_create(configNivelLogPath(), "NIVEL", configNivelLogConsola(), configNivelLogNivel() );
 	log_info(LOGGER, "INFO: INICIALIZANDO NIVEL '%s'\n", NOMBRENIVEL);
 	log_debug(LOGGER, "DEBUG: INICIALIZANDO NIVEL '%s' ", NOMBRENIVEL);
 
@@ -91,19 +102,25 @@ void inicializarNivel () {
 void finalizarNivel () {
 
 	log_info(LOGGER, "FINALIZANDO NIVEL-GUI '%s'", NOMBRENIVEL);
-	// finalizar NIVEL-GUI
+	// Libero / finalizo NIVEL-GUI
 	list_destroy_and_destroy_elements(GUIITEMS, (void*)free);
 	nivel_gui_terminar();
 
+	log_info(LOGGER, "FINALIZANDO NIVEL '%s'", NOMBRENIVEL);
+
+	// Libero variables globales
 	free(buffer_header);
 
-	log_info(LOGGER, "FINALIZANDO NIVEL '%s'", NOMBRENIVEL);
+	// Libero estructuras de configuracion
 	log_info(LOGGER, "LIBERANDO ESTRUCTURAS DE CONFIG-NIVEL '%s'", NOMBRENIVEL);
 	destruirConfigNivel();
 
+	// Libero logger
 	log_info(LOGGER, "LIBERANDO ESTRUCTURAS DE LOGGER '%s' \n\n (Adios Mundo CRUEL!) piiiiiiiiiiiiiii.....\n\n", NOMBRENIVEL);
 	log_destroy(LOGGER);
 
+	// Libero a Willy!
+	// free (Willy);
 }
 
 
@@ -157,7 +174,9 @@ void rnd(int *x, int max) {
 int enviarMSJNuevoNivel(int sock) {
 	header_t header;
 	header.tipo = NUEVO_NIVEL;
-	header.largo_mensaje = 0/*TAMPRESENT*/;
+	header.largo_mensaje = strlen(NOMBRENIVEL);
+	char* buffer = malloc(header.largo_mensaje+1);
+	strcpy(buffer, NOMBRENIVEL);
 
 	buffer_header = calloc(1,sizeof(header_t)/*TAMHEADER*/); /*primera y unica vez */
 	memset(buffer_header, '\0', sizeof(header_t)/*TAMHEADER*/);
@@ -167,11 +186,133 @@ int enviarMSJNuevoNivel(int sock) {
 
 	if (enviar(sock, buffer_header, sizeof(header_t)) != EXITO)
 	{
-		log_error(LOGGER,"Error al enviar header NUEVO_PERSONAJE\n\n");
+		log_error(LOGGER,"Error al enviar header NUEVO_NIVEL\n\n");
 		return WARNING;
 	}
+
+	if (enviar(sock, buffer, header.largo_mensaje) != EXITO)
+	{
+		log_error(LOGGER,"Error al enviar NOMBRE NIVEL\n\n");
+		return WARNING;
+	}
+
+	free(buffer);
 	return EXITO;
 }
+
+
+void simulacroJuego () {
+
+	int q, p;
+	int x = 1;
+	int y = 1;
+//	int ex1 = 10, ey1 = 14;
+//	int ex2 = 20, ey2 = 3;
+
+	p = MAXCOLS;
+	q = MAXROWS;
+
+	CrearPersonaje(GUIITEMS, '@', p, q);
+	CrearPersonaje(GUIITEMS, '#', x, y);
+
+	nivel_gui_dibujar(GUIITEMS, NOMBRENIVEL);
+
+	while ( 1 ) {
+		int key = getch();
+
+		switch( key ) {
+
+			case KEY_UP:
+				if (y > 1) {
+					y--;
+				}
+			break;
+
+			case KEY_DOWN:
+				if (y < MAXROWS) {
+					y++;
+				}
+			break;
+
+			case KEY_LEFT:
+				if (x > 1) {
+					x--;
+				}
+			break;
+			case KEY_RIGHT:
+				if (x < MAXCOLS) {
+					x++;
+				}
+			break;
+			case 'w':
+			case 'W':
+				if (q > 1) {
+					q--;
+				}
+			break;
+
+			case 's':
+			case 'S':
+				if (q < MAXROWS) {
+					q++;
+				}
+			break;
+
+			case 'a':
+			case 'A':
+				if (p > 1) {
+					p--;
+				}
+			break;
+			case 'D':
+			case 'd':
+				if (p < MAXCOLS) {
+					p++;
+				}
+			break;
+			case 'Q':
+			case 'q':
+				//nivel_gui_terminar();
+				//exit(0);
+			break;
+		}
+
+
+//		rnd(&ex1, MAXCOLS);
+//		rnd(&ey1, MAXROWS);
+//		rnd(&ex2, MAXCOLS);
+//		rnd(&ey2, MAXROWS);
+//		MoverPersonaje(GUIITEMS, '1', ex1, ey1 );
+//		MoverPersonaje(GUIITEMS, '2', ex2, ey2 );
+
+		MoverPersonaje(GUIITEMS, '@', p, q);
+		MoverPersonaje(GUIITEMS, '#', x, y);
+
+		if (   ((p == 26) && (q == 10)) || ((x == 26) && (y == 10)) ) {
+			restarRecurso(GUIITEMS, 'H');
+		}
+
+		if (   ((p == 19) && (q == 9)) || ((x == 19) && (y == 9)) ) {
+			restarRecurso(GUIITEMS, 'F');
+		}
+
+		if (   ((p == 8) && (q == 15)) || ((x == 8) && (y == 15)) ) {
+			restarRecurso(GUIITEMS, 'M');
+		}
+
+		if((p == x) && (q == y)) {
+			BorrarItem(GUIITEMS, '#'); //si chocan, borramos uno (!)
+		}
+
+		nivel_gui_dibujar(GUIITEMS, NOMBRENIVEL);
+
+		if (key=='q' || key=='Q')
+			break;
+	}
+
+	return;
+}
+
 
 void ejemploGui () {
 

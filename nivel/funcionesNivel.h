@@ -13,6 +13,8 @@
 #include <curses.h>
 #include <signal.h>
 #include <unistd.h>
+#include <string.h>
+#include <pthread.h>
 
 #include "tad_items.h"
 #include "commons/log.h"
@@ -20,6 +22,7 @@
 #include "commons/comunicacion.h"
 
 #include "config/configNivel.h"
+#define MAXCANTENEMIGOS 50
 
 typedef struct enemigo {
 
@@ -31,11 +34,19 @@ t_list* GUIITEMS;
 int MAXROWS, MAXCOLS;
 char *buffer_header;
 
+pthread_t idHiloInterbloqueo;
+pthread_t idHiloEnemigo[MAXCANTENEMIGOS];
+
 int correrTest();
 void principal ();
 
 void inicializarNivel ();
 void finalizarNivel ();
+void simulacroJuego ();
+
+//hilos
+void* interbloqueo(void *parametro);
+void* enemigo(void *idEnemigo);
 
 // señales
 void signal_callback_handler(int signum);
