@@ -48,8 +48,11 @@ void principal () {
 			exit(EXIT_FAILURE);
 		}
 
-		agregar_descriptor(sock, &master, &max_desc);
+		// Devuelve en fdPipeMainToEnemy[0] el descriptor de lectura y en fdPipeMainToEnemy[1] el descriptor de escritura
+		// NivelMain debe escribir en fdPipeMainToEnemy[1] y el hilo enemigo debe leer en fdPipeMainToEnemy[0]
+		pipe(fdPipeMainToEnemy);
 
+		agregar_descriptor(sock, &master, &max_desc);
 		pthread_create (&idHiloInterbloqueo, NULL, (void*) interbloqueo, NULL);
 
 		while(1);

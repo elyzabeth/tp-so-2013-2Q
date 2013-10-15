@@ -18,8 +18,18 @@ ITEM_NIVEL* _search_enemy_by_id(t_list* items, char id) {
 
 void* enemigo(int32_t *idEnemigo) {
 	int x=10, y=15;
+	char buffer[4] = {0};
+	fd_set master;
+	fd_set read_fds;
+	FD_ZERO(&master);
+	FD_ZERO(&read_fds);
+	int max_desc = 0;
+
 	int32_t id = (int32_t) idEnemigo;
+	// Obtengo parametros del archivo de configuracion
 	int32_t sleepEnemigos = configNivelSleepEnemigos();
+
+	agregar_descriptor(fdPipeMainToEnemy[0], &master, &max_desc);
 
 	rnd(&x, MAXCOLS);
 	rnd(&y, MAXROWS);
@@ -35,6 +45,8 @@ void* enemigo(int32_t *idEnemigo) {
 
 		MoverPersonaje(GUIITEMS, id, x, y );
 		//nivel_gui_dibujar(GUIITEMS, NOMBRENIVEL);
+
+		read (fdPipeMainToEnemy[0], buffer, 4);
 
 		usleep(sleepEnemigos);
 	}

@@ -36,6 +36,8 @@ char *buffer_header;
 
 pthread_t idHiloInterbloqueo;
 pthread_t idHiloEnemigo[MAXCANTENEMIGOS];
+// Para comunicacion con hilos;
+int32_t fdPipeMainToEnemy [2];
 
 int correrTest();
 void principal ();

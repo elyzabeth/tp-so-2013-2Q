@@ -99,7 +99,15 @@ void inicializarNivel () {
 
 }
 
+void finalizarHiloEnemigo() {
+	int i ;
 
+	log_info(LOGGER, "FINALIZANDO HILOS ENEMIGOS '%s'", NOMBRENIVEL);
+	write (fdPipeMainToEnemy[1], "FIN", 4);
+
+	for (i=0; i < configNivelEnemigos(); i++)
+		pthread_join(idHiloEnemigo[i], NULL);
+}
 
 void finalizarNivel () {
 
@@ -112,6 +120,11 @@ void finalizarNivel () {
 
 	// Libero variables globales
 	free(buffer_header);
+
+	// libero Tuberia de comunicacion con hilos
+	finalizarHiloEnemigo();
+	close (fdPipeMainToEnemy[0]);
+	close (fdPipeMainToEnemy[1]);
 
 	// Libero estructuras de configuracion
 	log_info(LOGGER, "LIBERANDO ESTRUCTURAS DE CONFIG-NIVEL '%s'", NOMBRENIVEL);
