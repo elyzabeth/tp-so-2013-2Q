@@ -1,6 +1,6 @@
 #include "plataforma.h"
 
-char *buffer_header;
+
 pthread_t idHiloOrquestador;
 pthread_t idHilosPlanificador[100];
 int32_t cantHilosPlanificador;
@@ -137,10 +137,13 @@ void principal() {
 
 	pthread_join (idHiloOrquestador, NULL); //espera que finalice el hilo orquestador para continuar
 
+	return;
 }
 
 int enviarMsjPersonajeConectado (int fd) {
+	int ret;
 	header_t header;
+	char* buffer_header = malloc(sizeof(header_t));
 
 	memset(&header, '\0', sizeof(header_t));
 	header.tipo=PERSONAJE_CONECTADO;
@@ -151,11 +154,16 @@ int enviarMsjPersonajeConectado (int fd) {
 
 	log_info(LOGGER, "Envio mensaje de personaje conectado...");
 
-	return enviar(fd, buffer_header, sizeof(header_t));
+	ret =  enviar(fd, buffer_header, sizeof(header_t));
+	free(buffer_header);
+
+	return ret;
 }
 
 int enviarMsjNivelConectado (int fd) {
 	header_t header;
+	char* buffer_header = malloc(sizeof(header_t));
+	int ret;
 
 	memset(&header, '\0', sizeof(header_t));
 	header.tipo=NIVEL_CONECTADO;
@@ -166,7 +174,11 @@ int enviarMsjNivelConectado (int fd) {
 
 	log_info(LOGGER, "Envio mensaje de personaje conectado...");
 
-	return enviar(fd, buffer_header, sizeof(header_t));
+	ret = enviar(fd, buffer_header, sizeof(header_t));
+
+	free(buffer_header);
+
+	return ret;
 }
 
 void nuevoPersonaje(int fdPersonaje, fd_set *master) {
@@ -262,7 +274,7 @@ void inicializarPlataforma () {
 
 	PUERTO = configPlatPuerto();
 	plataforma.personajes_en_juego=0;
-	buffer_header = malloc(sizeof(header_t));
+
 	listaPersonajesNuevos = list_create();
 	listaPersonajesEnJuego = list_create();
 	listaNiveles = dictionary_create();
@@ -285,8 +297,7 @@ void finalizarPlataforma() {
 	// Libero semaforos
 	pthread_mutex_destroy(&mutexListaPersonajesNuevos);
 	pthread_mutex_destroy(&mutexListaPersonajesEnJuego);
-	// Libero buffer
-	free(buffer_header);
+
 	// Libero estructuras de configuracion
 	destruirConfigPlataforma();
 	// Libero logger
