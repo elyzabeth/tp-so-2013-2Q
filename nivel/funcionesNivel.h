@@ -32,7 +32,8 @@ t_log* LOGGER;
 char NOMBRENIVEL[20+1];
 t_list* GUIITEMS;
 int MAXROWS, MAXCOLS;
-char *buffer_header;
+
+pthread_mutex_t mutexLockGlobalGUI;
 
 pthread_t idHiloInterbloqueo;
 pthread_t idHiloEnemigo[MAXCANTENEMIGOS];
@@ -44,8 +45,16 @@ void principal ();
 
 void inicializarNivel ();
 void finalizarNivel ();
+
 void simulacroJuego ();
 void ejemploGui ();
+
+// funciones GUI sincronizadas por semaforo mutex
+void gui_dibujar();
+void gui_mover_personaje (char id, int x, int y);
+void gui_crearEnemigo(char id, int x, int y);
+void gui_crearCaja(char id, int x, int y, int instancias);
+
 
 //hilos
 void* interbloqueo(void *parametro);

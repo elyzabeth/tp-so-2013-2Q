@@ -24,6 +24,37 @@ void validarPosicionCaja(char s, int32_t x, int32_t y) {
 
 }
 
+void gui_crearPersonaje(char id, int x, int y) {
+	pthread_mutex_lock (&mutexLockGlobalGUI);
+	CrearPersonaje(GUIITEMS, id, x, y);
+	pthread_mutex_unlock (&mutexLockGlobalGUI);
+}
+
+void gui_crearCaja(char id, int x, int y, int instancias) {
+	pthread_mutex_lock (&mutexLockGlobalGUI);
+	CrearCaja(GUIITEMS, id, x, y, instancias);
+	pthread_mutex_unlock (&mutexLockGlobalGUI);
+}
+
+void gui_crearEnemigo(char id, int x, int y) {
+	pthread_mutex_lock (&mutexLockGlobalGUI);
+	CrearEnemigo(GUIITEMS, id, x, y);
+	pthread_mutex_unlock (&mutexLockGlobalGUI);
+}
+
+void gui_mover_personaje (char id, int x, int y) {
+	pthread_mutex_lock (&mutexLockGlobalGUI);
+	MoverPersonaje(GUIITEMS, id, x, y );
+	pthread_mutex_unlock (&mutexLockGlobalGUI);
+}
+
+void gui_dibujar() {
+	pthread_mutex_lock (&mutexLockGlobalGUI);
+	nivel_gui_dibujar(GUIITEMS, NOMBRENIVEL);
+	pthread_mutex_unlock (&mutexLockGlobalGUI);
+}
+
+
 /**
  * @NAME: agregarCajasRecursos
  * @DESC: Agrega al listado de items las cajas
@@ -35,33 +66,25 @@ void agregarCajasRecursos() {
 
 	void _add_box(char *simbolo, t_caja *caja) {
 		validarPosicionCaja(caja->SIMBOLO, caja->POSX, caja->POSY);
-		CrearCaja(GUIITEMS, caja->SIMBOLO, caja->POSX, caja->POSY, caja->INSTANCIAS);
+		gui_crearCaja(caja->SIMBOLO, caja->POSX, caja->POSY, caja->INSTANCIAS);
 	}
 
 	dictionary_iterator(recursos, (void*)_add_box);
 
 }
 
+/**
+ * @NAME: agregarEnemigos
+ * @DESC: Crea un hilo por cada enemigo.
+ *  La cantidad de enemigos esta definida en el archivo de configuracion (Enemigos).
+ */
 void agregarEnemigos() {
 
-	// TODO agregar los enemigos
 	int i;
 	int32_t cantEnemigos = configNivelEnemigos();
 	int idEnemigo = '1';
 
-	int x=211, y=135;
-
 	for(i=0; i < cantEnemigos; i++) {
-
-		rnd(&x, MAXCOLS);
-		rnd(&y, MAXROWS);
-
-		log_info(LOGGER, "agregarEnemigos: Creo Enemigo '%c' %d",idEnemigo, idEnemigo);
-		log_debug(LOGGER,"(%d,%d)",x,y);
-		CrearEnemigo(GUIITEMS, idEnemigo, x, y);
-		rnd(&x, MAXCOLS);
-		rnd(&y, MAXROWS);
-
 
 		// Creo el hilo para el enemigo
 		pthread_create (&idHiloEnemigo[i], NULL, (void*) enemigo, (int32_t*)idEnemigo);
@@ -81,7 +104,8 @@ void inicializarNivelGui() {
     agregarEnemigos();
     agregarCajasRecursos();
 
-    nivel_gui_dibujar(GUIITEMS, NOMBRENIVEL);
+    //nivel_gui_dibujar(GUIITEMS, NOMBRENIVEL);
+    gui_dibujar();
 }
 
 void inicializarNivel () {
@@ -93,6 +117,9 @@ void inicializarNivel () {
 	LOGGER = log_create(configNivelLogPath(), "NIVEL", configNivelLogConsola(), configNivelLogNivel() );
 	log_info(LOGGER, "INFO: INICIALIZANDO NIVEL '%s'\n", NOMBRENIVEL);
 	log_debug(LOGGER, "DEBUG: INICIALIZANDO NIVEL '%s' ", NOMBRENIVEL);
+
+	pthread_mutex_init (&mutexLockGlobalGUI, NULL);
+	//pthread_mutex_init (&mutexLockGlobalMoverPersonaje, NULL);
 
 	//inicializar NIVEL-GUI
 	inicializarNivelGui();
@@ -118,13 +145,13 @@ void finalizarNivel () {
 
 	log_info(LOGGER, "FINALIZANDO NIVEL '%s'", NOMBRENIVEL);
 
-	// Libero variables globales
-	free(buffer_header);
-
 	// libero Tuberia de comunicacion con hilos
 	finalizarHiloEnemigo();
 	close (fdPipeMainToEnemy[0]);
 	close (fdPipeMainToEnemy[1]);
+
+	pthread_mutex_destroy(&mutexLockGlobalGUI);
+	//pthread_mutex_destroy(&mutexLockGlobalMoverPersonaje);
 
 	// Libero estructuras de configuracion
 	log_info(LOGGER, "LIBERANDO ESTRUCTURAS DE CONFIG-NIVEL '%s'", NOMBRENIVEL);
@@ -190,28 +217,30 @@ int enviarMSJNuevoNivel(int sock) {
 	header_t header;
 	header.tipo = NUEVO_NIVEL;
 	header.largo_mensaje = strlen(NOMBRENIVEL);
-	char* buffer = malloc(header.largo_mensaje+1);
-	strcpy(buffer, NOMBRENIVEL);
+	char* bufferheader;
+	char* bufferpayload = malloc(header.largo_mensaje+1);
+	strcpy(bufferpayload, NOMBRENIVEL);
 
-	buffer_header = calloc(1,sizeof(header_t)/*TAMHEADER*/); /*primera y unica vez */
-	memset(buffer_header, '\0', sizeof(header_t)/*TAMHEADER*/);
-	memcpy(buffer_header, &header, sizeof(header_t)/*TAMHEADER*/);
+	bufferheader = calloc(1,sizeof(header_t)); /*primera y unica vez */
+	memset(bufferheader, '\0', sizeof(header_t));
+	memcpy(bufferheader, &header, sizeof(header_t));
 
-	log_info(LOGGER, "sizeof(header): %d, largo mensaje: %d  buffer_header: %lu\n", sizeof(header), header.largo_mensaje, sizeof(&buffer_header));
+	log_info(LOGGER, "sizeof(header): %d, largo mensaje: %d  bufferheader: %lu\n", sizeof(header), header.largo_mensaje, sizeof(&bufferheader));
 
-	if (enviar(sock, buffer_header, sizeof(header_t)) != EXITO)
+	if (enviar(sock, bufferheader, sizeof(header_t)) != EXITO)
 	{
 		log_error(LOGGER,"Error al enviar header NUEVO_NIVEL\n\n");
 		return WARNING;
 	}
 
-	if (enviar(sock, buffer, header.largo_mensaje) != EXITO)
+	if (enviar(sock, bufferpayload, header.largo_mensaje) != EXITO)
 	{
 		log_error(LOGGER,"Error al enviar NOMBRE NIVEL\n\n");
 		return WARNING;
 	}
 
-	free(buffer);
+	free(bufferpayload);
+	free(bufferheader);
 	return EXITO;
 }
 
@@ -224,14 +253,13 @@ void simulacroJuego () {
 //	int ex1 = 10, ey1 = 14;
 //	int ex2 = 20, ey2 = 3;
 
-	while(1);
 	p = MAXCOLS;
 	q = MAXROWS;
 
-//	CrearPersonaje(GUIITEMS, '@', p, q);
-//	CrearPersonaje(GUIITEMS, '#', x, y);
+	gui_crearPersonaje('@', p, q);
+	gui_crearPersonaje('#', x, y);
 
-	nivel_gui_dibujar(GUIITEMS, NOMBRENIVEL);
+	gui_dibujar();
 
 	while ( 1 ) {
 		int key = getch();
@@ -301,8 +329,8 @@ void simulacroJuego () {
 //		MoverPersonaje(GUIITEMS, '1', ex1, ey1 );
 //		MoverPersonaje(GUIITEMS, '2', ex2, ey2 );
 
-//		MoverPersonaje(GUIITEMS, '@', p, q);
-//		MoverPersonaje(GUIITEMS, '#', x, y);
+		gui_mover_personaje('@', p, q);
+		gui_mover_personaje('#', x, y);
 
 		if (   ((p == 26) && (q == 10)) || ((x == 26) && (y == 10)) ) {
 			restarRecurso(GUIITEMS, 'H');
@@ -320,7 +348,7 @@ void simulacroJuego () {
 			BorrarItem(GUIITEMS, '#'); //si chocan, borramos uno (!)
 		}
 
-		nivel_gui_dibujar(GUIITEMS, NOMBRENIVEL);
+		gui_dibujar();
 
 		if (key=='q' || key=='Q')
 			break;

@@ -55,8 +55,8 @@ void principal () {
 		agregar_descriptor(sock, &master, &max_desc);
 		pthread_create (&idHiloInterbloqueo, NULL, (void*) interbloqueo, NULL);
 
-		while(1);
-		//simulacroJuego ();
+		//while(1);
+		simulacroJuego ();
 		//ejemploGui();
 
 		return;
