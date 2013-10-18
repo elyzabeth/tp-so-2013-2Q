@@ -151,7 +151,7 @@ int enviarMsjPersonajeConectado (int fd) {
 	memset(buffer_header, '\0', sizeof(header_t));
 	memcpy(buffer_header, &header, sizeof(header_t));
 
-	log_info(LOGGER, "Envio mensaje de personaje conectado...");
+	log_info(LOGGER, "Envio mensaje de personaje conectado (fd: %d)...", fd);
 
 	ret =  enviar(fd, buffer_header, sizeof(header_t));
 	free(buffer_header);
@@ -192,7 +192,7 @@ int enviarMsjNivelConectado (int fd) {
 	memset(buffer_header, '\0', sizeof(header_t));
 	memcpy(buffer_header, &header, sizeof(header_t));
 
-	log_info(LOGGER, "Envio mensaje de nivel conectado al nivel (%d)...", fd);
+	log_info(LOGGER, "Envio mensaje de nivel conectado al nivel (fd: %d)...", fd);
 
 	ret = enviar(fd, buffer_header, sizeof(header_t));
 
