@@ -132,7 +132,12 @@ void inicializarNivel () {
 
 	pthread_mutex_init (&mutexLockGlobalGUI, NULL);
 
+	// inicializo listas
 	listaEnemigos = list_create();
+
+	// inicializo inotify
+	notifyFD = crearNotifyFD();
+	watchDescriptor = inotify_add_watch(notifyFD, PATH_CONFIG_NIVEL, IN_MODIFY);
 
 	//inicializar NIVEL-GUI
 	inicializarNivelGui();
@@ -155,7 +160,7 @@ void finalizarHilosEnemigos() {
 	memcpy(buffer_header, &header, sizeof(header_t));
 
 	void _finalizar_hilo(t_enemigo *enemy) {
-		log_debug(LOGGER, "%d/%d) Envio mensaje de FINALIZAR a Enemigo %d (%u)", i+1, cantEnemigos, enemy->id, enemy->tid);
+		log_debug(LOGGER, "%d/%d) Envio mensaje de FINALIZAR a Enemigo '%c' (%u)", i+1, cantEnemigos, enemy->id, enemy->tid);
 		write(enemy->fdPipe[1], buffer_header, sizeof(header_t));
 		pthread_join(enemy->tid, NULL);
 		sleep(1);
@@ -176,10 +181,15 @@ void finalizarNivel () {
 	// Libero / finalizo NIVEL-GUI
 	nivel_gui_terminar();
 
+	log_info(LOGGER, "FINALIZANDO NIVEL '%s'", NOMBRENIVEL);
+
+	// Libero listas dinamicas
 	list_destroy_and_destroy_elements(GUIITEMS, (void*)free);
 	list_destroy_and_destroy_elements(listaEnemigos, (void*)destruirEnemigo);
 
-	log_info(LOGGER, "FINALIZANDO NIVEL '%s'", NOMBRENIVEL);
+	// Finalizo inotify
+	inotify_rm_watch(notifyFD, watchDescriptor);
+	close(notifyFD);
 
 	// libero semaforos
 	pthread_mutex_destroy(&mutexLockGlobalGUI);
@@ -195,6 +205,26 @@ void finalizarNivel () {
 
 	// Libero a Willy!
 	// free (Willy);
+}
+
+int crearNotifyFD() {
+
+	int fd;
+
+	//char *p;
+	//int inotifyFd, j;
+	//struct inotify_event *event;
+
+	/*creating the INOTIFY instance*/
+	fd = inotify_init();
+
+	/*checking for error*/
+	if (fd < 0) {
+		perror("inotify_init");
+	}
+
+	//wd = inotify_add_watch( fd, "/tmp", IN_CREATE | IN_DELETE );
+	return fd;
 }
 
 

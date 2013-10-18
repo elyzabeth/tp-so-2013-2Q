@@ -49,7 +49,7 @@ void* enemigo (t_enemigo *enemy) {
 			continue;
 		}
 		if (ret == 0) {
-			log_debug(LOGGER, "Enemigo '%c': timeout", enemy->id);
+			//log_debug(LOGGER, "Enemigo '%c': timeout", enemy->id);
 
 			//TODO agregar logica del enemigo
 			// Cambiar este movimiento aleatorio por el que corresponde

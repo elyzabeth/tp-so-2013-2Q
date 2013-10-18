@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
+#include <sys/inotify.h>
 
 #include "tad_items.h"
 #include "commons/log.h"
@@ -27,9 +28,8 @@
 
 #define MAXCANTENEMIGOS 50
 
-//typedef struct enemigo {
-//
-//} t_enemigo;
+int32_t watchDescriptor;
+int32_t notifyFD;
 
 t_log* LOGGER;
 char NOMBRENIVEL[20+1];
@@ -47,6 +47,7 @@ void principal ();
 
 void inicializarNivel ();
 void finalizarNivel ();
+int crearNotifyFD();
 
 void simulacroJuego ();
 void ejemploGui ();
