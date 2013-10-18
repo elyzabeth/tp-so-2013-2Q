@@ -22,7 +22,7 @@ int main (int argc, char**argv) {
 
 	inicializarNivel();
 	principal ();
-	//while(1);
+
 	finalizarNivel();
 
 	return EXIT_SUCCESS;
@@ -42,20 +42,15 @@ void principal () {
 		log_info(LOGGER,"************** Iniciando Nivel '%s' (PID: %d) ***************\n", NOMBRENIVEL, id_proceso);
 		// Conectar con proceso Plataforma
 		conectar(configNivelPlataformaIp(), configNivelPlataformaPuerto(), &sock);
-		if (enviarMSJNuevoNivel(sock) != EXITO){
+		if (enviarMSJNuevoNivel(sock) != EXITO) {
 			log_error(LOGGER, "ERROR en conexion con Plataforma");
 			finalizarNivel();
 			exit(EXIT_FAILURE);
 		}
 
-		// Devuelve en fdPipeMainToEnemy[0] el descriptor de lectura y en fdPipeMainToEnemy[1] el descriptor de escritura
-		// NivelMain debe escribir en fdPipeMainToEnemy[1] y el hilo enemigo debe leer en fdPipeMainToEnemy[0]
-		pipe(fdPipeMainToEnemy);
-
 		agregar_descriptor(sock, &master, &max_desc);
 		pthread_create (&idHiloInterbloqueo, NULL, (void*) interbloqueo, NULL);
 
-		//while(1);
 		simulacroJuego ();
 		//ejemploGui();
 
