@@ -16,6 +16,7 @@
 #include "commons/string.h"
 #include "commons/collections/queue.h"
 #include "tad_items.h"
+#include "commons/comunicacion.h"
 
 t_list* GUIITEMS;
 int MAXROWS, MAXCOLS;
@@ -28,16 +29,92 @@ void nuevoHilo (void * param);
 void testHilo();
 void testNivelGui();
 
-
+void testPipe();
+void hiloPipe (void * p);
 
 int main () {
 
 	//GenerarListaObjetivos();
 	//getStringAsArray();
 	//testHilo();
-	testNivelGui();
+	//testNivelGui();
+	testPipe();
 
 	return 0;
+}
+
+int32_t fdPipe[2];
+
+void testPipe() {
+
+	pthread_t idHilo;
+	int i = 0;
+
+	pipe(fdPipe);
+	pthread_create(&idHilo, NULL, (void*)hiloPipe, NULL);
+
+	sleep(8);
+	write (fdPipe[1], "1", 2);
+
+	while (1) {
+		printf("%d) testHilo: testPipe\n", i++);
+		printf(" %d %% 5 = %d\n", i, (i%5));
+		sleep(3);
+
+		if(!(i%6)){
+			printf("Envio mensaje por pipe\n");
+			write(fdPipe[1], "1", 2);
+		}
+	}
+}
+
+void hiloPipe (void * p) {
+	fd_set master;
+	fd_set read_fds;
+	int max_desc = 0;
+	int i, ret;
+	char buffer[200];
+	//int se_desconecto;
+
+	printf("\n\t\t\thiloPipe.\n");
+
+	FD_ZERO(&master);
+	agregar_descriptor(fdPipe[0], &master, &max_desc);
+
+	while(1){
+		FD_ZERO (&read_fds);
+		read_fds = master;
+		ret = select(max_desc+1, &read_fds, NULL, NULL, NULL);
+
+		if(ret == -1)
+		{
+			printf("ERROR en select.");
+		}
+
+		if (ret == 0) {
+			printf("timeout\n");
+			continue;
+		}
+		if (ret > 0) {
+			printf("\t\t\tHubo actividad ret: %d\n", ret);
+			for(i = 0; i <= max_desc; i++)
+			{
+
+				if (FD_ISSET(i, &read_fds) && (i == fdPipe[0]))
+				{
+					printf("\t\t\tactividad en pipe socket: %d\n", i);
+					read (fdPipe[0], buffer, 2);
+					printf("\t\t\tLlega mensaje: %s\n\n", buffer);
+				}
+				if (FD_ISSET(i, &read_fds) && (i != fdPipe[0]))
+				{
+					printf("\t\t\tactividad en otro socket: %d\n", i);
+				}
+
+			}
+		}
+		sleep(5);
+	}
 }
 
 void testNivelGui(){
@@ -46,13 +123,13 @@ void testNivelGui(){
 	GUIITEMS = list_create();
 
 	nivel_gui_inicializar();
-    nivel_gui_get_area_nivel(&MAXROWS, &MAXCOLS);
-    nivel_gui_dibujar(GUIITEMS, "TEST");
+	nivel_gui_get_area_nivel(&MAXROWS, &MAXCOLS);
+	nivel_gui_dibujar(GUIITEMS, "TEST");
 
 	pthread_create(&idHilo, NULL, (void*)nuevoHilo, NULL);
 	while (1) {
 		//puts("testHilo: sigo por aca");
-		 nivel_gui_dibujar(GUIITEMS, "TEST");
+		nivel_gui_dibujar(GUIITEMS, "TEST");
 		sleep(1);
 	}
 }
