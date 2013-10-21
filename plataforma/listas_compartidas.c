@@ -151,23 +151,27 @@ t_planificador* quitarDeListaNiveles(char *nivel) {
 }
 
 int eliminarNivelesFinalizados () {
-	t_dictionary *aux = dictionary_create();
+
 	pthread_mutex_lock (&mutexListaNiveles);
-printf("tamanio antes: %d", dictionary_size(listaNiveles));
-	void _buscar_no_finalizados(char *key, t_planificador *planner) {
-		if(planner->estado != FINALIZADO)
-			dictionary_put(aux, key, planner);
-		else
-			destruirPlanificador(planner);
+
+	if (dictionary_size(listaNiveles)>0) {
+		t_dictionary *aux = dictionary_create();
+
+		void _buscar_no_finalizados(char *key, t_planificador *planner) {
+			if(planner->estado != FINALIZADO)
+				dictionary_put(aux, key, planner);
+			else
+				destruirPlanificador(planner);
+		}
+		dictionary_iterator(listaNiveles, (void*)_buscar_no_finalizados);
+		dictionary_clean(listaNiveles);
+		void _agregar(char *key, t_planificador *planner){
+			dictionary_put(listaNiveles, key, planner);
+		}
+		dictionary_iterator(aux, (void*)_agregar);
+		dictionary_destroy(aux);
 	}
-	dictionary_iterator(listaNiveles, (void*)_buscar_no_finalizados);
-	dictionary_clean(listaNiveles);
-	void _agregar(char *key, t_planificador *planner){
-		dictionary_put(listaNiveles, key, planner);
-	}
-	dictionary_iterator(aux, (void*)_agregar);
-	dictionary_destroy(aux);
-printf("tamanio despues: %d", dictionary_size(listaNiveles));
+
 	pthread_mutex_unlock (&mutexListaNiveles);
 
 	return dictionary_size(listaNiveles);

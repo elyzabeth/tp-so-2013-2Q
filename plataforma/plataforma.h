@@ -50,6 +50,9 @@ pthread_mutex_t mutexListaNiveles;
 void inicializarPlataforma();
 void finalizarPlataforma();
 
+void principal();
+void matarHilos();
+
 void nuevoPersonaje(int fdPersonaje, fd_set *master);
 void nuevoNivel(int fdNivel, header_t header) ;
 
