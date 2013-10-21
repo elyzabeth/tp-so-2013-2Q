@@ -25,6 +25,13 @@ typedef struct config_plataforma_s
 
 } config_plataforma_t;
 
+typedef struct orq {
+	pthread_t tid;
+	int32_t fdPipe[2]; // fdPipe[0] de lectura/ fdPipe[1] de escritura
+} t_hiloOrquestador;
+
+t_hiloOrquestador hiloOrquestador;
+
 t_log* LOGGER;
 int32_t PUERTO;
 config_plataforma_t plataforma;
@@ -47,7 +54,7 @@ void nuevoPersonaje(int fdPersonaje, fd_set *master);
 void nuevoNivel(int fdNivel, header_t header) ;
 
 // hilos
-void* orquestador(void *parametro);
+void* orquestador(t_hiloOrquestador *hiloOrquestador);
 void* planificador(t_planificador *nivel);
 
 // señales

@@ -1,7 +1,6 @@
 #include "plataforma.h"
 
 
-pthread_t idHiloOrquestador;
 
 void principal();
 void matarHilos();
@@ -27,7 +26,7 @@ int main(int argc, char *argv[]) {
  */
 void principal() {
 
-	int id_proceso, i, se_desconecto;
+	int id_proceso;
 
 	/************************************ Inicio  **************************************/
 	id_proceso = getpid();
@@ -38,103 +37,9 @@ void principal() {
 	/****************************** Logica Hilos ****************************************/
 
 	log_info(LOGGER, "Creando hilo orquestador...");
-	pthread_create (&idHiloOrquestador, NULL, (void*) orquestador, NULL);
+	pthread_create (&hiloOrquestador.tid, NULL, (void*) orquestador, (void*)&hiloOrquestador);
 
-
-	/***************************** LOGICA PRINCIPAL ********************************/
-
-	header_t header;
-	fd_set master;
-	fd_set read_fds;
-	FD_ZERO(&master);
-	FD_ZERO(&read_fds);
-
-	int max_desc = 0;
-	int nuevo_sock;
-	int listener;
-
-
-
-	/****************************** Creacion Listener ****************************************/
-
-	log_info(LOGGER, "****************** CREACION DEL LISTENER *****************\n");
-
-	//crear_listener(/*puerto*/1500, &listener);
-	// Uso puerto seteado en el archivo de configuracion
-	crear_listener(PUERTO, &listener);
-
-	agregar_descriptor(listener, &master, &max_desc);
-
-	while(1)
-	{
-
-		FD_ZERO (&read_fds);
-		read_fds = master;
-
-		if((select(max_desc+1, &read_fds, NULL, NULL, NULL/*&tvDemora*/)) == -1)
-		{
-			puts("a");
-		}
-
-		for(i = 0; i <= max_desc; i++)
-		{
-			//otrosDescriptor = 1;
-			if (FD_ISSET(i, &read_fds) && (i == listener))
-			{
-				/* nueva conexion */
-				log_info(LOGGER, "NUEVA CONEXION");
-
-				aceptar_conexion(&listener, &nuevo_sock);
-				//agregar_descriptor(nuevo_sock, &master, &max_desc);
-
-				recibir_header(nuevo_sock, &header, &master, &se_desconecto);
-
-				switch (header.tipo)
-				{
-					case NUEVO_PERSONAJE:
-						log_info(LOGGER, "NUEVO PERSONAJE");
-						nuevoPersonaje(nuevo_sock, &master);
-						break;
-
-					case NUEVO_NIVEL:
-						log_info(LOGGER, "NUEVO NIVEL");
-						nuevoNivel(nuevo_sock, header);
-						//agregar_descriptor(nuevo_sock, &master, &max_desc);
-						break;
-
-					case OTRO:
-						break;
-				}
-			}
-
-			if (FD_ISSET(i, &read_fds) && (i != listener))
-			{
-				log_debug(LOGGER, "recibo mensaje socket %d", i);
-				recibir_header(i, &header, &master, &se_desconecto);
-				log_debug(LOGGER, "el tipo de mensaje es: %d\n", header.tipo);
-
-				if(se_desconecto)
-				{
-					log_info(LOGGER, "Se desconecto el socket %d", i);
-					// TODO chequear si se desconecto personaje o nivel y borrarlo de las estructuras
-					// si es personaje informar al nivel para que lo borre?
-					// plataforma.personajes_en_juego--;
-
-					// Quito el descriptor del set
-					FD_CLR(i, &master);
-				}
-
-				if ((header.tipo == CONECTAR_NIVEL) && (se_desconecto != 1))
-				{
-					puts("CONECTAR NIVEL"); //Nunca voy a necesitar este mensaje.
-
-				}
-
-			}
-		}
-	}
-
-	pthread_join (idHiloOrquestador, NULL); //espera que finalice el hilo orquestador para continuar
+	pthread_join (hiloOrquestador.tid, NULL); //espera que finalice el hilo orquestador para continuar
 
 	return;
 }
@@ -174,6 +79,27 @@ int enviarMsjAPlanificador (t_planificador *planner, char msj) {
 	log_info(LOGGER, "Enviando mensaje al planificador (%s).......", planner->nivel.nombre);
 
 	ret =  write(planner->fdPipe[1], buffer_header, sizeof(header_t));
+
+	free(buffer_header);
+
+	return ret;
+}
+
+int enviarMsjAOrquestador (char msj) {
+	int ret;
+	header_t header;
+	char* buffer_header = malloc(sizeof(header_t));
+
+	memset(&header, '\0', sizeof(header_t));
+	header.tipo = msj;
+	header.largo_mensaje=0;
+
+	memset(buffer_header, '\0', sizeof(header_t));
+	memcpy(buffer_header, &header, sizeof(header_t));
+
+	log_info(LOGGER, "Enviando mensaje al orquestador.");
+
+	ret =  write(hiloOrquestador.fdPipe[1], buffer_header, sizeof(header_t));
 
 	free(buffer_header);
 
@@ -323,6 +249,8 @@ void inicializarPlataforma () {
 	pthread_mutex_init (&mutexListaPersonajesEnJuego, NULL);
 	pthread_mutex_init (&mutexListaPersonajesFinAnormal, NULL);
 	pthread_mutex_init (&mutexListaNiveles, NULL);
+
+	pipe(hiloOrquestador.fdPipe);
 }
 
 
@@ -348,6 +276,9 @@ void finalizarPlataforma() {
 	pthread_mutex_destroy(&mutexListaPersonajesFinAnormal);
 	pthread_mutex_destroy(&mutexListaNiveles);
 
+	close(hiloOrquestador.fdPipe[0]);
+	close(hiloOrquestador.fdPipe[1]);
+
 	// Libero estructuras de configuracion
 	destruirConfigPlataforma();
 
@@ -360,11 +291,15 @@ void finalizarPlataforma() {
 
 void matarHilos() {
 
+	enviarMsjAOrquestador(FINALIZAR);
+	pthread_join(hiloOrquestador.tid, NULL);
+
 	void _finalizar_hilo(char* key, t_planificador *planner){
 		enviarMsjAPlanificador(planner, FINALIZAR );
 		pthread_join(planner->tid, NULL);
 	}
 	dictionary_iterator(listaNiveles, (void*)_finalizar_hilo);
+
 
 }
 
