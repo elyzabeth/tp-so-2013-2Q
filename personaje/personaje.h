@@ -22,7 +22,7 @@ t_log* LOGGER;
 int32_t VIDAS;
 int32_t REINTENTOS;
 
-char *buffer_header;
+//char *buffer_header;
 
 t_queue *planDeNiveles;
 t_list *listaHilosxNivel;
@@ -54,11 +54,15 @@ typedef struct hilo {
 
 personaje_t personaje;
 
+pthread_mutex_t mutexEnvioMensaje;
+
+// Prototipos de funciones
 int principal(int argc, char *argv[]);
 void inicializarPersonaje();
 void finalizarPersonaje();
 
 void levantarHilosxNivel() ;
+void esperarHilosxNivel();
 void* personajexNivel (t_hilo_personaje *hiloPxN);
 t_hilo_personaje* crearHiloPersonaje();
 void destruirHiloPersonaje(t_hilo_personaje* hiloPersonaje);

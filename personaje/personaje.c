@@ -7,7 +7,7 @@
 
 #include "personaje.h"
 
-
+int test ();
 
 int main (int argc, char *argv[]) {
 
@@ -19,7 +19,8 @@ int main (int argc, char *argv[]) {
 	inicializarPersonaje();
 
 	// TODO agregar logica del personaje
-	principal(argc, argv);
+	//principal(argc, argv);
+	test ();
 
 	finalizarPersonaje();
 
@@ -37,7 +38,8 @@ int principal(int argc, char *argv[]) {
 	log_info(LOGGER,"************** Iniciando Personaje '%s' (PID: %d) ***************\n", personaje.nombre, id_proceso);
 
 	levantarHilosxNivel();
-while(1); // TODO QUITAR ESTOOO!!!
+
+	esperarHilosxNivel();
 
 	return 0;
 }
@@ -82,7 +84,6 @@ sleep(1);
 		if(ret == -1) {
 			printf("Personaje %s '%c': ERROR en select.", hiloPxN->personaje.nombre, hiloPxN->personaje.id);
 			sleep(1);
-			continue;
 		}
 
 		if (ret > 0) {
@@ -91,6 +92,7 @@ sleep(1);
 
 				if (FD_ISSET(i, &read_fds))
 				{
+					// Pregunto si el socket con actividad es el del Pipe
 					if( i == hiloPxN->fdPipe[0])
 					{
 						header_t header;
@@ -105,11 +107,13 @@ sleep(1);
 						}
 
 					} else {
+						// Si NO es un mensaje del hilo principal por Pipe es un mensaje del proceso Plataforma.
 
 						memset(&header, '\0', sizeof(header_t));
 						recibirHeaderNuevoMsj(sock, &header);
 
-						switch (header.tipo) /*recibo estado */
+						// Recino el header con el tipo de mensaje
+						switch (header.tipo)
 						{
 							case PERSONAJE_CONECTADO: log_info(LOGGER,"Personaje Conectado");
 								enviarInfoPersonaje(sock);
@@ -133,39 +137,62 @@ sleep(1);
 	pthread_exit(NULL);
 }
 
-/**
- * @NAME: inicializarPersonaje
- * @DESC: Inicializa todas las variables y estructuras necesarias para el proceso personaje
- */
-void inicializarPersonaje() {
-	levantarArchivoConfiguracionPersonaje();
-	// TODO agregar inicializaciones necesarias
-	LOGGER = log_create(configPersonajeLogPath(), "PERSONAJE", configPersonajeLogConsola(), configPersonajeLogNivel() );
-	log_info(LOGGER, "INICIALIZANDO PERSONAJE '%s' ", configPersonajeNombre());
 
-	strcpy(personaje.nombre, configPersonajeNombre());
-	strcpy(personaje.ip_orquestador, configPersonajePlataformaIp());
-	personaje.puerto_orquestador = configPersonajePlataformaPuerto();
-	VIDAS = configPersonajeVidas();
-	REINTENTOS = 0;
-	planDeNiveles = configPersonajePlanDeNiveles();
-	listaHilosxNivel = list_create();
+int test () {
 
+	//personaje_t personaje; // Lo hago global para poder inicializarlo desde funcion
+	int id_proceso;
+	int sock = -1;
+	header_t header;
+
+	char *buffer_header;
 	buffer_header = calloc(1,sizeof(header_t));
+
+	//char *buffer_header; // Lo hago global para poder inicializarlo y liberarlo desde funcion
+	/************************************ Inicio **************************************/
+	/*
+	  if(argc != 3)
+	  {
+	    	puts("Error cantidad Parametros");
+	  }
+	 */
+	id_proceso = getpid();
+	system("clear");
+
+	log_info(LOGGER,"************** Iniciando Personaje '%s' (PID: %d) ***************\n", personaje.nombre, id_proceso);
+	//cambiar_nombre_proceso(argv,argc, personaje.nombre);
+
+	/***************** ME CONECTO Y ARMO MENSAJE DE PRESENTACION *******/
+	log_info(LOGGER,"************** CONECTANDOSE  ***************\n");
+	conectar(personaje.ip_orquestador, personaje.puerto_orquestador, &sock);
+
+
+	if (enviarMsjNuevoPersonaje(sock) != EXITO)
+	{
+		log_error(LOGGER,"Error al enviar header NUEVO_PERSONAJE\n\n");
+		return WARNING;
+	}
+
+	while(1)
+	{
+
+		recibir (sock, buffer_header, sizeof(header_t));
+		memcpy(&header, buffer_header, sizeof(header_t));
+
+		switch (header.tipo) /*recibo estado */
+		{
+			case PERSONAJE_CONECTADO: log_info(LOGGER,"Personaje Conectado");
+				enviarInfoPersonaje(sock);
+			break;
+
+			case OTRO: log_info(LOGGER, "otro");
+			break;
+
+		}
+
+		sleep(15);
+	}
+
+	//free (buffer_header); /* Solo al final porque lo uso siempre */ Movido a finalizarPersonaje()
+	return 0;
 }
-
-/**
- * @NAME: finalizarPersonaje
- * @DESC: Finaliza todas las variables y estructuras que fueron creadas para el proceso personaje
- */
-void finalizarPersonaje() {
-	log_info(LOGGER, "FINALIZANDO PERSONAJE\n");
-
-	// TODO Bajar Hilos
-	// matarHilos()...
-
-	list_destroy_and_destroy_elements(listaHilosxNivel, (void*)destruirHiloPersonaje);
-	destruirConfigPersonaje();
-	log_destroy(LOGGER);
-}
-

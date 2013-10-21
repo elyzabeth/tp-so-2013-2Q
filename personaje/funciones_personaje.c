@@ -7,6 +7,55 @@
 
 #include "personaje.h"
 
+
+/**
+ * @NAME: inicializarPersonaje
+ * @DESC: Inicializa todas las variables y estructuras necesarias para el proceso personaje
+ */
+void inicializarPersonaje() {
+	levantarArchivoConfiguracionPersonaje();
+	// TODO agregar inicializaciones necesarias
+	LOGGER = log_create(configPersonajeLogPath(), "PERSONAJE", configPersonajeLogConsola(), configPersonajeLogNivel() );
+	log_info(LOGGER, "INICIALIZANDO PERSONAJE '%s' ", configPersonajeNombre());
+
+	strcpy(personaje.nombre, configPersonajeNombre());
+	strcpy(personaje.ip_orquestador, configPersonajePlataformaIp());
+	personaje.puerto_orquestador = configPersonajePlataformaPuerto();
+	VIDAS = configPersonajeVidas();
+	REINTENTOS = 0;
+	planDeNiveles = configPersonajePlanDeNiveles();
+	listaHilosxNivel = list_create();
+
+	pthread_mutex_init (&mutexEnvioMensaje, NULL);
+}
+
+/**
+ * @NAME: finalizarPersonaje
+ * @DESC: Finaliza todas las variables y estructuras que fueron creadas para el proceso personaje
+ */
+void finalizarPersonaje() {
+	log_info(LOGGER, "FINALIZANDO PERSONAJE\n");
+
+	// TODO Bajar Hilos
+	// matarHilos()...
+
+	pthread_mutex_destroy(&mutexEnvioMensaje);
+
+	list_destroy_and_destroy_elements(listaHilosxNivel, (void*)destruirHiloPersonaje);
+	destruirConfigPersonaje();
+	log_destroy(LOGGER);
+}
+
+
+void esperarHilosxNivel() {
+
+	void _join_thread (t_hilo_personaje hilo){
+		pthread_join(hilo.tid, NULL);
+	}
+
+	list_iterate(listaHilosxNivel, (void*)_join_thread);
+}
+
 void levantarHilosxNivel() {
 	int i;
 	int cant = queue_size(planDeNiveles);
@@ -21,10 +70,13 @@ void levantarHilosxNivel() {
 		hiloPersonaje->personaje.id = configPersonajeSimbolo();
 		hiloPersonaje->objetivos = *oxn;
 
+		list_add(listaHilosxNivel, hiloPersonaje);
+
 		// Creo el hilo para el nivel
 		pthread_create (&hiloPersonaje->tid, NULL, (void*)personajexNivel, (t_hilo_personaje*)hiloPersonaje);
 
-		//pthread_join(&hiloPersonaje->tid, NULL);
+		pthread_join(hiloPersonaje->tid, NULL);
+		break;
 	}
 
 }
@@ -49,6 +101,8 @@ void destruirHiloPersonaje(t_hilo_personaje* hiloPersonaje) {
 }
 
 int recibirHeaderNuevoMsj (int sock, header_t *header) {
+
+	pthread_mutex_lock (&mutexEnvioMensaje);
 	char *buffer_header;
 	int ret;
 
@@ -59,11 +113,14 @@ int recibirHeaderNuevoMsj (int sock, header_t *header) {
 	memcpy(&header, buffer_header, sizeof(header_t));
 
 	free(buffer_header);
+	pthread_mutex_unlock (&mutexEnvioMensaje);
 
 	return ret;
 }
 
 int enviarMsjNuevoPersonaje( int sock ) {
+	pthread_mutex_lock (&mutexEnvioMensaje);
+
 	header_t header;
 	char *buffer_header;
 	int ret;
@@ -81,6 +138,7 @@ int enviarMsjNuevoPersonaje( int sock ) {
 	ret =  enviar(sock, buffer_header, sizeof(header_t));
 	free(buffer_header);
 
+	pthread_mutex_unlock (&mutexEnvioMensaje);
 
 	return ret;
 }
@@ -94,6 +152,8 @@ int enviarInfoPersonaje(int sock) {
 
 	log_debug(LOGGER, "Datos: (%s, %d, %c)",  configPersonajeNombre(),configPersonajeSimbolo(), configPersonajeSimbolo());
 	buffer = calloc(1, sizeof(header_t));
+
+	memset(&yo, '\0', sizeof(t_personaje));
 	strcpy(yo.nombre, configPersonajeNombre());
 	yo.id = configPersonajeSimbolo();
 	yo.posActual.x = 0;
