@@ -76,5 +76,6 @@ int32_t decrementarVida();
 int recibirHeaderNuevoMsj (int sock, header_t *header) ;
 int enviarMsjNuevoPersonaje( int sock );
 int enviarInfoPersonaje(int sock);
+int enviarSolicitudUbicacion (int sock);
 
 #endif /* PERSONAJE_H_ */

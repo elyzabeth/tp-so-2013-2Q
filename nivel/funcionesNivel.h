@@ -84,6 +84,7 @@ void signal_callback_handler(int signum);
 //comunicacion
 int enviarMsjAInterbloqueo (char msj);
 int enviarMSJNuevoNivel(int sock);
+int enviarMsjCambiosConfiguracion(int sock);
 void tratarSolicitudUbicacion(int sock, header_t header);
 
 

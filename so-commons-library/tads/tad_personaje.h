@@ -29,6 +29,7 @@ typedef struct personaje {
 	int32_t fd;
 	char nivel[MAXLENNOMBRE+1];
 	char recurso;
+	int32_t criterio;
 } t_personaje;
 #pragma pack(0)
 

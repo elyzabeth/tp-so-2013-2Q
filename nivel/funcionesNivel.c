@@ -353,6 +353,48 @@ int enviarMSJNuevoNivel(int sock) {
 	return EXITO;
 }
 
+int enviarMsjCambiosConfiguracion(int sock) {
+	int ret;
+	header_t header;
+	t_nivel nivel;
+	char* buffer_header;
+	char* buffer_payload;
+
+	initHeader(&header);
+	header.tipo = CAMBIOS_CONFIGURACION;
+	header.largo_mensaje = sizeof(t_nivel);
+
+	buffer_header = calloc(1, sizeof(header_t));
+	memcpy(buffer_header, &header, sizeof(header_t));
+
+	log_info(LOGGER, "enviarMsjCambiosConfiguracion: fd:%d, sizeof(header): %d, largo mensaje: %d  bufferheader: %lu\n", sock, sizeof(header), header.largo_mensaje, sizeof(&buffer_header));
+
+	if ((ret = enviar(sock, buffer_header, sizeof(header_t))) != EXITO)
+	{
+		log_error(LOGGER,"enviarMsjCambiosConfiguracion: Error al enviar header CAMBIOS_CONFIGURACION\n\n");
+		return WARNING;
+	}
+
+	initNivel(&nivel);
+	strcpy(nivel.nombre, configNivelNombre());
+	strcpy(nivel.algoritmo, configNivelAlgoritmo());
+	nivel.quantum = configNivelQuantum();
+	nivel.retardo = configNivelRetardo();
+
+	buffer_payload = calloc(1,sizeof(t_nivel));
+	memcpy(buffer_payload, &nivel, sizeof(t_nivel));
+
+	if ((ret = enviar(sock, buffer_payload, header.largo_mensaje)) != EXITO)
+	{
+		log_error(LOGGER,"enviarMsjCambiosConfiguracion: ERROR al enviar datos del nivel con CAMBIOS_CONFIGURACION\n\n");
+		return WARNING;
+	}
+
+	free(buffer_payload);
+	free(buffer_header);
+
+	return ret;
+}
 
 void tratarSolicitudUbicacion(int sock, header_t header) {
 	t_personaje personaje;

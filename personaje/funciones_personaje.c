@@ -192,6 +192,57 @@ int enviarInfoPersonaje(int sock) {
 	return EXITO;
 }
 
+int enviarSolicitudUbicacion (int sock) {
+	// PRUEBA
+	header_t header;
+	t_personaje yo;
+	char* buffer;
+	log_debug(LOGGER, "Envio mensaje de prueba con info del personaje");
+
+	log_debug(LOGGER, "Datos: (%s, %d, %c)",  configPersonajeNombre(),configPersonajeSimbolo(), configPersonajeSimbolo());
+	buffer = calloc(1, sizeof(header_t));
+
+	//memset(&yo, '\0', sizeof(t_personaje));
+	initPersonje(&yo);
+	strcpy(yo.nombre, configPersonajeNombre());
+	yo.id = configPersonajeSimbolo();
+	yo.posActual.x = 0;
+	yo.posActual.y = 0;
+	yo.fd = 0;
+	strcpy( yo.nivel, "Nivel1");
+	yo.recurso = 'F';
+
+	initHeader(&header);
+	header.tipo = SOLICITUD_UBICACION;
+	header.largo_mensaje = sizeof(t_personaje);
+
+	memcpy(buffer, &header, sizeof(header_t));
+
+	log_debug(LOGGER, "Envio header SOLICITUD_UBICACION %d", sizeof(header_t));
+	if (enviar(sock, buffer, sizeof(header_t)) != EXITO)
+	{
+		log_error(LOGGER,"Error al enviar header SOLICITUD_UBICACION\n\n");
+		free(buffer);
+		return WARNING;
+	}
+
+	free(buffer);
+	buffer = calloc(1, sizeof(t_personaje));
+	memcpy(buffer, &yo, sizeof(t_personaje));
+
+	log_debug(LOGGER, "Envio t_personaje %d (%s, %c, %d, %d, %d, %s, recurso: %c)", sizeof(t_personaje), yo.nombre, yo.id, yo.posActual.x, yo.posActual.y, yo.fd, yo.nivel, yo.recurso);
+	if (enviar(sock, buffer, sizeof(t_personaje)) != EXITO)
+	{
+		log_error(LOGGER,"Error al enviar informacion del personaje\n\n");
+		free(buffer);
+		return WARNING;
+	}
+
+	free(buffer);
+
+	return EXITO;
+}
+
 /*
  * En caso de tener vidas disponibles, el Personaje se descontará una vida, volverá a conectarse
  * al hilo Orquestador y le notificará su intención de iniciar nuevamente el Nivel en que estaba jugando.

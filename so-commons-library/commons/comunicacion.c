@@ -171,6 +171,18 @@ int recibir_personaje(int sock, t_personaje *personaje, fd_set *master, int *seD
 
 }
 
+int quitar_descriptor(int desc, fd_set *listaDesc, int *maxDesc)
+{
+	close(desc);
+	FD_CLR(desc, listaDesc);
+
+	if (desc == *maxDesc)
+	{
+		*maxDesc = *maxDesc-1;
+	}
+	return EXITO;
+}
+
 int agregar_descriptor(int desc, fd_set *listaDesc, int *maxDesc)
 {
 

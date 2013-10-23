@@ -139,7 +139,7 @@ void nuevoPersonaje(int fdPersonaje, fd_set *master) {
 		log_error(LOGGER, "Error al enviar header PERSONAJE_CONECTADO\n\n");
 
 	} else {
-		// TODO quitar hardcodeo!!
+
 		// recibir informacion del personaje.
 		// SI existe el nivel solicitado lo agrego si no, enviar mensaje de nivel inexistente??
 

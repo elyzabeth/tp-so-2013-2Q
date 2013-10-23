@@ -39,8 +39,8 @@ void* enemigo (t_hiloEnemigo *enemy) {
 
 		FD_ZERO (&read_fds);
 		read_fds = master;
-		timeout.tv_sec = 0; /// retardo en segundos timeout
-		timeout.tv_usec = sleepEnemigos; //retardo en microsegundos timeout
+		timeout.tv_sec = sleepEnemigos * 0.001; /// retardo en segundos timeout
+		timeout.tv_usec = 0; //retardo en microsegundos timeout
 
 		ret = select(max_desc+1, &read_fds, NULL, NULL, &timeout);
 		if(ret == -1) {

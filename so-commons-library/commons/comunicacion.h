@@ -34,7 +34,9 @@
 #define SOLICITUD_RECURSO		0x16
 #define RECURSO_CONCEDIDO		0x17
 #define RECURSO_DENEGADO		0x18
+#define TURNO_CONCEDIDO			0x19
 #define FINALIZAR				0x20
+#define CAMBIOS_CONFIGURACION	0x21
 
 
 #pragma pack(1)
@@ -47,6 +49,7 @@ typedef struct header_s
 }header_t;
 #pragma pack(0)
 
+header_t* crearHeader();
 void initHeader(header_t* header);
 int enviar(int sock, char *buffer, int tamano);
 int recibir(int sock, char *buffer, int tamano);
@@ -56,6 +59,7 @@ int recibir_header(int sock, header_t *header, fd_set *master/*por si se descone
 int recibir_personaje(int sock, t_personaje *personaje, fd_set *master, int *seDesconecto);
 int aceptar_conexion(int *listener, int *nuevoSock);
 int agregar_descriptor(int desc, fd_set *listaDesc, int *maxDesc);
+int quitar_descriptor(int desc, fd_set *listaDesc, int *maxDesc);
 int crear_listener(int puerto, int *listener);
 void genId(char idMsg[]);
 
