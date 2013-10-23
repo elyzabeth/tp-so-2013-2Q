@@ -197,9 +197,11 @@ int enviarSolicitudUbicacion (int sock) {
 	header_t header;
 	t_personaje yo;
 	char* buffer;
+
+	char recurso = 'F'; // TODO quitar hardcodeo!!!
 	log_debug(LOGGER, "Envio mensaje de prueba con info del personaje");
 
-	log_debug(LOGGER, "Datos: (%s, %d, %c)",  configPersonajeNombre(),configPersonajeSimbolo(), configPersonajeSimbolo());
+	log_debug(LOGGER, "Datos: (%s, %d, %c, %c)",  configPersonajeNombre(),configPersonajeSimbolo(), configPersonajeSimbolo(), recurso);
 	buffer = calloc(1, sizeof(header_t));
 
 	//memset(&yo, '\0', sizeof(t_personaje));
@@ -210,7 +212,7 @@ int enviarSolicitudUbicacion (int sock) {
 	yo.posActual.y = 0;
 	yo.fd = 0;
 	strcpy( yo.nivel, "Nivel1");
-	yo.recurso = 'F';
+	yo.recurso = recurso;
 
 	initHeader(&header);
 	header.tipo = SOLICITUD_UBICACION;
@@ -239,6 +241,60 @@ int enviarSolicitudUbicacion (int sock) {
 	}
 
 	free(buffer);
+
+	return EXITO;
+}
+
+int recibirUbicacionRecursoPlanificador( int sock, fd_set *master, t_proximoObjetivo *proximoObjetivo, t_hilo_personaje *hiloPxN ) {
+	int ret, se_desconecto;
+	t_caja caja;
+
+	log_debug(LOGGER, "recibirUbicacionRecursoPlanificador: Espero recibir estructura t_caja (size:%d)...", sizeof(t_caja));
+
+	if ((ret = recibir_caja(sock, &caja, master, &se_desconecto))!=EXITO) {
+		log_error(LOGGER, "recibirUbicacionRecursoPlanificador: ERROR al recibir t_caja con ubicacion del recurso");
+	}
+
+	log_debug(LOGGER, "recibirUbicacionRecursoPlanificador: Llego: %s (%c) posicion (%d, %d).", caja.RECURSO, caja.SIMBOLO, caja.POSX, caja.POSY);
+
+	// TODO hacer algo con la info que llega!
+	proximoObjetivo->posicion.x = caja.POSX;
+	proximoObjetivo->posicion.y = caja.POSY;
+
+	return ret;
+}
+
+int gestionarTurnoConcedido(int sock, t_proximoObjetivo *proximoObjetivo, t_hilo_personaje *hiloPxN) {
+
+	log_info(LOGGER, "gestionarTurnoConcedido.");
+
+	// SI no tengo las coordenadas del proximo objetivo las solicito.
+	if(!proximoObjetivo->posicion.x && !proximoObjetivo->posicion.y) {
+		log_info(LOGGER, "No tengo coordenadas de proximo objetivo debo solicitar ubicacion.");
+		enviarSolicitudUbicacion(sock);
+
+	} else if (!calcularDistancia(hiloPxN->posicionActual.x, hiloPxN->posicionActual.y, proximoObjetivo->posicion.x, proximoObjetivo->posicion.y)) {
+		// SI mi posicion actual es = a la posicion del objetivo
+		// Solicitar una instancia del recurso al Planificador.
+		log_info(LOGGER, "Estoy en la caja de recursos, debo solicitar una instancia.");
+	} else {
+		// SI tengo coordenadas del objetivo pero no es igual a mi posicion actual.
+		// Calcular proximo movimiento, avanzar y notificar al Planificador con un mensaje.
+		log_info(LOGGER, "Debo calcular proximo movimiento...");
+
+	}
+
+	return EXITO;
+}
+
+int gestionarRecursoConcedido (int sock, t_proximoObjetivo *proximoObjetivo, t_hilo_personaje *hiloPxN) {
+
+	log_info(LOGGER, "gestionarRecursoConcedido.");
+	//TODO agregar logica...
+	//	Cuando el recurso sea asignado, el hilo analizará si necesita otro recurso y
+	//	volverá al punto 3) (esperar TURNO_CONCEDIDO), o, si ya cumplió sus objetivos del Nivel
+	// Notificar a su Planificador que completó los objetivos de ese nivel y desconectarse.
+
 
 	return EXITO;
 }

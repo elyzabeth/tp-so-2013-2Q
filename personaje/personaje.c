@@ -8,6 +8,7 @@
 #include "personaje.h"
 
 int test ();
+int test2();
 
 int main (int argc, char *argv[]) {
 
@@ -40,6 +41,11 @@ int principal(int argc, char *argv[]) {
 	levantarHilosxNivel();
 
 	esperarHilosxNivel();
+
+	// TODO	Al concluir todos los niveles, se conectará al Orquestador y notificará que concluyó su
+//	plan de niveles. Este lo moverá a una cola de finalizados y lo dejará a la espera de que
+//	los demás Personajes terminen.
+
 
 	return 0;
 }
@@ -207,6 +213,17 @@ int test2 () {
 	int i, ret;
 	int fin = false;
 
+	t_hilo_personaje hiloPxN;
+	memset(&hiloPxN,'\0', sizeof(t_hilo_personaje));
+
+	t_proximoObjetivo proximoObjetivo;
+	memset(&proximoObjetivo,'\0', sizeof(t_proximoObjetivo));
+
+
+	t_objetivosxNivel *oxn = (t_objetivosxNivel*)queue_pop(planDeNiveles);
+	hiloPxN.objetivos = *oxn;
+	proximoObjetivo.simbolo = hiloPxN.objetivos.objetivos[hiloPxN.objetivosConseguidos];
+
 	char *buffer_header;
 	buffer_header = calloc(1,sizeof(header_t));
 
@@ -228,12 +245,13 @@ int test2 () {
 		return WARNING;
 	}
 
-	while(1)
+	while(!fin)
 	{
 		FD_ZERO (&read_fds);
 		read_fds = master;
 
 		ret = select(max_desc+1, &read_fds, NULL, NULL, NULL);
+
 		if(ret == -1) {
 			printf("Personaje: ERROR en select.");
 			sleep(1);
@@ -245,23 +263,37 @@ int test2 () {
 
 				if (FD_ISSET(i, &read_fds))
 				{
-					recibir (sock, buffer_header, sizeof(header_t));
-					memcpy(&header, buffer_header, sizeof(header_t));
+					if (i == sock) {
+						recibir (sock, buffer_header, sizeof(header_t));
+						memcpy(&header, buffer_header, sizeof(header_t));
 
-					switch (header.tipo) /*recibo estado */
-					{
-						case PERSONAJE_CONECTADO: log_info(LOGGER,"Personaje Conectado");
-						enviarInfoPersonaje(sock);
-						break;
+						switch (header.tipo) /*recibo estado */
+						{
+							case PERSONAJE_CONECTADO: log_info(LOGGER,"PERSONAJE_CONECTADO");
+							enviarInfoPersonaje(sock);
+							break;
 
-						case TURNO_CONCEDIDO: log_info(LOGGER,"Turno Concedido");
-						enviarSolicitudUbicacion(sock);
-						break;
+							case TURNO_CONCEDIDO: log_info(LOGGER,"TURNO_CONCEDIDO");
+							gestionarTurnoConcedido(sock, &proximoObjetivo, &hiloPxN);
+							break;
 
-						case OTRO: log_info(LOGGER, "otro");
-						break;
+							case UBICACION_RECURSO: log_info(LOGGER, "UBICACION_RECURSO");
+							recibirUbicacionRecursoPlanificador( sock, &master, &proximoObjetivo, &hiloPxN);
+							break;
 
+							case RECURSO_CONCEDIDO: log_info(LOGGER,"RECURSO_CONCEDIDO");
+							gestionarRecursoConcedido(sock, &proximoObjetivo, &hiloPxN);
+							break;
+
+							case OTRO: log_info(LOGGER, "otro??");
+							break;
+
+						}
+
+					} else {
+						log_debug(LOGGER, "Actividad en el socket %d", i);
 					}
+
 				}
 			}
 		}

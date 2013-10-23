@@ -312,26 +312,20 @@ int enviarMsjAInterbloqueo (char msj) {
 int enviarMSJNuevoNivel(int sock) {
 	header_t header;
 	t_nivel nivel;
-	char* buffer_header;
 	char* buffer_payload;
 
 	initHeader(&header);
 	header.tipo = NUEVO_NIVEL;
 	header.largo_mensaje = sizeof(t_nivel);
 
-	buffer_header = calloc(1, sizeof(header_t));
-	//memset(bufferheader, '\0', sizeof(header_t));
-	memcpy(buffer_header, &header, sizeof(header_t));
+	log_info(LOGGER, "enviarMSJNuevoNivel: sizeof(header): %d, largo mensaje: %d \n", sizeof(header), header.largo_mensaje);
 
-	log_info(LOGGER, "enviarMSJNuevoNivel: sizeof(header): %d, largo mensaje: %d  bufferheader: %lu\n", sizeof(header), header.largo_mensaje, sizeof(&buffer_header));
-
-	if (enviar(sock, buffer_header, sizeof(header_t)) != EXITO)
+	if (enviar_header(sock, &header) != EXITO)
 	{
 		log_error(LOGGER,"enviarMSJNuevoNivel: Error al enviar header NUEVO_NIVEL\n\n");
 		return WARNING;
 	}
 
-	//memset(&nivel, '\0', sizeof(t_nivel));
 	initNivel(&nivel);
 	strcpy(nivel.nombre, configNivelNombre());
 	strcpy(nivel.algoritmo, configNivelAlgoritmo());
@@ -344,11 +338,11 @@ int enviarMSJNuevoNivel(int sock) {
 	if (enviar(sock, buffer_payload, header.largo_mensaje) != EXITO)
 	{
 		log_error(LOGGER,"enviarMSJNuevoNivel: Error al enviar datos del nivel\n\n");
+		free(buffer_payload);
 		return WARNING;
 	}
 
 	free(buffer_payload);
-	free(buffer_header);
 
 	return EXITO;
 }
@@ -357,19 +351,14 @@ int enviarMsjCambiosConfiguracion(int sock) {
 	int ret;
 	header_t header;
 	t_nivel nivel;
-	char* buffer_header;
-	char* buffer_payload;
 
 	initHeader(&header);
 	header.tipo = CAMBIOS_CONFIGURACION;
 	header.largo_mensaje = sizeof(t_nivel);
 
-	buffer_header = calloc(1, sizeof(header_t));
-	memcpy(buffer_header, &header, sizeof(header_t));
+	log_info(LOGGER, "enviarMsjCambiosConfiguracion: fd:%d, sizeof(header): %d, largo mensaje: %d \n", sock, sizeof(header), header.largo_mensaje);
 
-	log_info(LOGGER, "enviarMsjCambiosConfiguracion: fd:%d, sizeof(header): %d, largo mensaje: %d  bufferheader: %lu\n", sock, sizeof(header), header.largo_mensaje, sizeof(&buffer_header));
-
-	if ((ret = enviar(sock, buffer_header, sizeof(header_t))) != EXITO)
+	if ((ret = enviar_header(sock, &header)) != EXITO)
 	{
 		log_error(LOGGER,"enviarMsjCambiosConfiguracion: Error al enviar header CAMBIOS_CONFIGURACION\n\n");
 		return WARNING;
@@ -381,44 +370,53 @@ int enviarMsjCambiosConfiguracion(int sock) {
 	nivel.quantum = configNivelQuantum();
 	nivel.retardo = configNivelRetardo();
 
-	buffer_payload = calloc(1,sizeof(t_nivel));
-	memcpy(buffer_payload, &nivel, sizeof(t_nivel));
-
-	if ((ret = enviar(sock, buffer_payload, header.largo_mensaje)) != EXITO)
+	if ((ret = enviar_nivel(sock, &nivel)) != EXITO)
 	{
 		log_error(LOGGER,"enviarMsjCambiosConfiguracion: ERROR al enviar datos del nivel con CAMBIOS_CONFIGURACION\n\n");
-		return WARNING;
+		return ret;
 	}
-
-	free(buffer_payload);
-	free(buffer_header);
 
 	return ret;
 }
 
-void tratarSolicitudUbicacion(int sock, header_t header) {
+int tratarSolicitudUbicacion(int sock, header_t header, fd_set *master) {
+	int ret, se_desconecto;
 	t_personaje personaje;
-	char* buffer_payload;
-	buffer_payload = calloc(1, header.largo_mensaje);
+	t_caja *recurso;
+	t_caja caja;
 
 	// Si llega un mensaje de SOLICITUD_UBICACION luego espero recibir un t_personaje
-	if (recibir(sock, buffer_payload, header.largo_mensaje) != EXITO)
+	if ((ret=recibir_personaje(sock, &personaje, master, &se_desconecto)) != EXITO)
 	{
-		log_error(LOGGER,"tratarSolicitudUbicacion: ERROR al recibir payload SOLICITUD_UBICACION\n\n");
-		free(buffer_payload);
+		log_error(LOGGER,"tratarSolicitudUbicacion: ERROR al recibir payload t_personaje en SOLICITUD_UBICACION\n\n");
 		// TODO cancelo o solo retorno??
-		return;
+		return ret;
 	}
 
-	initPersonje(&personaje);
-	memcpy(&personaje, buffer_payload, sizeof(t_personaje));
+	log_debug(LOGGER,"tratarSolicitudUbicacion: Llego: %s, %c, recurso '%c' \n\n", personaje.nombre, personaje.id, personaje.recurso);
+	recurso = configNivelRecurso(personaje.recurso);
+	caja = *recurso;
+
+	// Envio caja con ubicacion al planificador
+	initHeader(&header);
+	header.tipo = UBICACION_RECURSO;
+	header.largo_mensaje = sizeof(t_caja);
+
+	if ((ret = enviar_header(sock, &header)) != EXITO) {
+		log_error(LOGGER,"tratarSolicitudUbicacion: ERROR al enviar header UBICACION_RECURSO\n\n");
+		return ret;
+	}
+
+	if ((ret = enviar_caja(sock, &caja)) != EXITO) {
+		log_error(LOGGER,"tratarSolicitudUbicacion: ERROR al enviar t_caja de UBICACION_RECURSO\n\n");
+		return ret;
+	}
 
 	// TODO agegar personaje a lista de personajes en juego
 	// y a la lista GUIITEMS para graficarlo.
 	gui_crearPersonaje(personaje.id, personaje.posActual.x, personaje.posActual.y);
 
-	free(buffer_payload);
-
+	return ret;
 }
 
 

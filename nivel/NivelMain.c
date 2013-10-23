@@ -85,7 +85,7 @@ void principal () {
 
 						if(se_desconecto)
 						{
-							log_info(LOGGER, "Se desconecto el socket %d %l", i, master);
+							log_info(LOGGER, "Se desconecto el socket %d ", i);
 							quitar_descriptor(i, &master, &max_desc);
 
 						} else {
@@ -99,7 +99,7 @@ void principal () {
 
 								case SOLICITUD_UBICACION:
 									log_info(LOGGER, "Llego mensaje SOLICITUD_UBICACION (fd:%d)", i);
-									tratarSolicitudUbicacion(i, header);
+									tratarSolicitudUbicacion(i, header, &master);
 									break;
 
 								case SOLICITUD_RECURSO:
