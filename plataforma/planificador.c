@@ -9,12 +9,17 @@
 
 t_personaje* moverPersonajeNuevoAListo(t_planificador *planner);
 t_personaje* quitarPersonajeColaxId(t_queue *personajesListos, char idPersonaje);
+t_personaje* quitarPersonajeColaxFD(t_queue *colaPersonajes, int32_t fdPersonaje);
 t_personaje* moverPersonajeListoABloqueado(t_planificador *planner, char idPersonaje);
 void planificarPersonaje(t_planificador *planner);
 int enviarMsjTurnoConcedido(t_personaje *personaje, char* nivel);
 int recibirCambiosConfiguracion(int32_t fdNivel, header_t header, t_planificador *planner);
 int recibirSolicitudUbicacion(int fdPersonaje, header_t header, fd_set *master, t_planificador *planner );
 int recibirUbicacionRecursoNivel( header_t header, fd_set *master, t_planificador *planner );
+int recibirMovimientoRealizado(int fdPersonaje, header_t header, fd_set *master, t_planificador *planner );
+int recibirSolicitudRecurso(int fdPersonaje, header_t header, fd_set *master, t_planificador *planner );
+int enviarMovimientoRealizadoNivel(header_t *header, t_personaje *personaje, t_planificador *planner);
+
 
 void* planificador(t_planificador *planner) {
 
@@ -48,12 +53,12 @@ void* planificador(t_planificador *planner) {
 
 		FD_ZERO (&read_fds);
 		read_fds = master;
-		timeout.tv_sec = planner->nivel.retardo * 0.001; /// retardo en Segundos timeout
-		timeout.tv_usec = 0 ;
+		//timeout.tv_sec = planner->nivel.retardo * 0.001; /// retardo en Segundos timeout
+		timeout.tv_sec = 0;
+		timeout.tv_usec = planner->nivel.retardo * 1000; /// retardo en microsegundos timeout
 
 		ret = select(max_desc+1, &read_fds, NULL, NULL, &timeout);
-		//ret = select(max_desc+1, &read_fds, NULL, NULL, NULL);
-		//log_debug(LOGGER, "PLANIFICADOR %s: ret: %d ", planner->nivel.nombre, ret);
+
 		// ret=-1 ERROR
 		// ret= 0 timeout sin actividad en los fd
 		if(ret == -1)
@@ -83,16 +88,17 @@ void* planificador(t_planificador *planner) {
 						read (planner->fdPipe[0], &header, sizeof(header_t));
 
 						log_debug(LOGGER, "PLANIFICADOR  %s: mensaje recibido '%d'", planner->nivel.nombre, header.tipo);
+
 						if (header.tipo == NUEVO_PERSONAJE) {
 							log_debug(LOGGER, "PLANIFICADOR  %s: mensaje recibido '%d' ES NUEVO_PERSONAJE", planner->nivel.nombre, header.tipo);
 							personaje = moverPersonajeNuevoAListo(planner);
 							agregar_descriptor(personaje->fd, &master, &max_desc);
 						}
+
 						if (header.tipo == FINALIZAR) {
 							log_debug(LOGGER, "PLANIFICADOR  %s: '%d' ES FINALIZAR", planner->nivel.nombre, header.tipo);
 							cambiarEstadoNivelaFinalizado(planner->nivel.nombre);
 							fin = true;
-							//FD_CLR(planner->fdPipe[0], &master);
 							quitar_descriptor(planner->fdPipe[0], &master, &max_desc);
 							break;
 						}
@@ -114,12 +120,19 @@ void* planificador(t_planificador *planner) {
 								quitar_descriptor(planner->fdPipe[0], &master, &max_desc);
 
 								// TODO informar a quien corresponda la desconeccion del nivel.
-								//informarDesconeccionPersonajes();
+								//informarDesconeccionAPersonajes();
 								break;
 							} else {
 								// TODO chequear si se desconecto personaje y borrarlo de las estructuras
 								// si es personaje informar al nivel para que lo borre?
-								log_debug(LOGGER, "PLANIFICADOR %s: socket %d recibo: %c", planner->nivel.nombre, i, header.tipo);
+								log_debug(LOGGER, "PLANIFICADOR %s: socket %d se desconecto", planner->nivel.nombre, i);
+								quitar_descriptor(i, &master, &max_desc);
+								quitarPersonajexFD(i);
+								quitarPersonajeColaxFD(planner->personajesListos, i);
+								quitarPersonajeColaxFD(planner->personajesBloqueados, i);
+
+								if (planner->personajeEjecutando->fd == i)
+									planner->personajeEjecutando = NULL;
 
 								continue;
 							}
@@ -141,10 +154,17 @@ void* planificador(t_planificador *planner) {
 								break;
 
 							case SOLICITUD_RECURSO: log_info(LOGGER, "PLANIFICADOR %s: SOLICITUD_RECURSO", planner->nivel.nombre);
+								recibirSolicitudRecurso(i, header, &master, planner);
 								break;
 
 							case MOVIMIENTO_REALIZADO: log_info(LOGGER, "PLANIFICADOR %s: MOVIMIENTO_REALIZADO", planner->nivel.nombre);
-								//planner->personajeEjecutando->criterio--; Se resta cuando llega mensaje de movimiento realizado.
+								recibirMovimientoRealizado(i, header, &master, planner);
+								break;
+
+							case RECURSO_CONCEDIDO: log_info(LOGGER, "PLANIFICADOR %s: RECURSO_CONCEDIDO", planner->nivel.nombre);
+								break;
+
+							case RECURSO_DENEGADO: log_info(LOGGER, "PLANIFICADOR %s: RECURSO_DENEGADO", planner->nivel.nombre);
 								break;
 
 							case OTRO: log_info(LOGGER, "PLANIFICADOR %s: OTRO", planner->nivel.nombre);
@@ -203,7 +223,31 @@ t_personaje* quitarPersonajeColaxId(t_queue *colaPersonajes, char idPersonaje) {
 	for (i = 0; i < tamanio; i++) {
 		personaje = queue_pop(colaPersonajes);
 
-		if(!personaje->id == idPersonaje){
+		if(personaje->id != idPersonaje){
+			queue_push(colaPersonajes, personaje);
+			personaje = NULL;
+		}
+	}
+
+	return personaje;
+}
+
+/**
+ * @NAME: quitarPersonajeColaxFD
+ * @DESC: Quita un personaje de la cola de personajes buscandolo por el file descriptor del personaje (socket)
+ * Si lo encuentra devuelve el puntero a la estructura t_personaje.
+ * Si no lo encuentra devuelve NULL.
+ * Se le pasa la cola de personajes y el fd del personaje buscado.
+ */
+t_personaje* quitarPersonajeColaxFD(t_queue *colaPersonajes, int32_t fdPersonaje) {
+	int tamanio = queue_size(colaPersonajes);
+	int i;
+	t_personaje *personaje = NULL;
+
+	for (i = 0; i < tamanio; i++) {
+		personaje = queue_pop(colaPersonajes);
+
+		if(personaje->fd != fdPersonaje){
 			queue_push(colaPersonajes, personaje);
 			personaje = NULL;
 		}
@@ -264,55 +308,24 @@ int recibirCambiosConfiguracion(int fdNivel, header_t header, t_planificador *pl
 
 int enviarSolicitudUbicacionNivel ( header_t header, t_personaje personaje, t_planificador *planner ) {
 	int ret;
-	char* buffer;
 
-	buffer = calloc(1, sizeof(header_t));
-	memcpy(buffer, &header, sizeof(header_t));
 	log_debug(LOGGER, "enviarSolicitudUbicacionNivel: Envio header (size: %d) SOLICITUD_UBICACION recurso %c al Nivel %s", sizeof(header_t), personaje.recurso, planner->nivel.nombre);
 
-	if (enviar(planner->nivel.fdSocket, buffer, sizeof(header_t)) != EXITO)
+	if (enviar_header(planner->nivel.fdSocket, &header) != EXITO)
 	{
 		log_error(LOGGER,"enviarSolicitudUbicacionNivel: Error al enviar header SOLICITUD_UBICACION\n\n");
-		free(buffer);
 		return WARNING;
 	}
 
-	free(buffer);
-	buffer = calloc(1, sizeof(t_personaje));
-	memcpy(buffer, &personaje, sizeof(t_personaje));
-
 	log_debug(LOGGER, "enviarSolicitudUbicacionNivel: Envio t_personaje %d (%s, %c, %d, %d, %d, %s, recurso: %c)", sizeof(t_personaje), personaje.nombre, personaje.id, personaje.posActual.x, personaje.posActual.y, personaje.fd, personaje.nivel, personaje.recurso);
-	if ((ret=enviar(planner->nivel.fdSocket, buffer, sizeof(t_personaje))) != EXITO)
+	if ((ret=enviar_personaje(planner->nivel.fdSocket, &personaje)) != EXITO)
 	{
 		log_error(LOGGER,"enviarSolicitudUbicacionNivel: Error al enviar informacion t_personaje en SOLICITUD_UBICACION\n\n");
-		free(buffer);
 		return ret;
 	}
 
-	free(buffer);
-
 	return ret;
 }
-
-
-int recibirSolicitudUbicacion(int fdPersonaje, header_t header, fd_set *master, t_planificador *planner ) {
-	int ret, se_desconecto;
-	t_personaje personaje;
-
-	log_debug(LOGGER, "Espero recibir estructura personaje (size:%d)...", header.largo_mensaje);
-	ret = recibir_personaje(fdPersonaje, &personaje, master, &se_desconecto);
-	log_debug(LOGGER, "Llego: %s (%c) al %s. Solicita recurso: '%c'", personaje.nombre, personaje.id, personaje.nivel, personaje.recurso);
-
-	// TODO hacer algo con la info que llega!
-	if (planner->personajeEjecutando->id == personaje.id)
-		planner->personajeEjecutando->recurso = personaje.recurso;
-
-	// Solicitar Ubicacion al NIVEL...
-	ret = enviarSolicitudUbicacionNivel(header, personaje, planner);
-
-	return ret;
-}
-
 
 int recibirUbicacionRecursoNivel( header_t header, fd_set *master, t_planificador *planner ) {
 	int ret;
@@ -335,6 +348,91 @@ int recibirUbicacionRecursoNivel( header_t header, fd_set *master, t_planificado
 	free(buffer);
 
 	return ret;
+}
+
+int recibirSolicitudUbicacion(int fdPersonaje, header_t header, fd_set *master, t_planificador *planner ) {
+	int ret, se_desconecto;
+	t_personaje personaje;
+
+	log_debug(LOGGER, "Espero recibir estructura personaje (size:%d)...", header.largo_mensaje);
+	ret = recibir_personaje(fdPersonaje, &personaje, master, &se_desconecto);
+	log_debug(LOGGER, "Llego: %s (%c) al %s. Solicita recurso: '%c'", personaje.nombre, personaje.id, personaje.nivel, personaje.recurso);
+
+	// TODO hacer algo con la info que llega!
+	if (planner->personajeEjecutando->id == personaje.id)
+		planner->personajeEjecutando->recurso = personaje.recurso;
+
+	// Solicitar Ubicacion al NIVEL...
+	ret = enviarSolicitudUbicacionNivel(header, personaje, planner);
+
+	return ret;
+}
+
+int enviarSolicitudRecursoNivel ( header_t header, t_personaje personaje, t_planificador *planner ) {
+	int ret;
+
+	log_debug(LOGGER, "enviarSolicitudRecursoNivel: Envio header (size: %d) SOLICITUD_RECURSO recurso %c al Nivel %s", sizeof(header_t), personaje.recurso, planner->nivel.nombre);
+
+	if (enviar_header(planner->nivel.fdSocket, &header) != EXITO)
+	{
+		log_error(LOGGER,"enviarSolicitudRecursoNivel: Error al enviar header SOLICITUD_RECURSO\n\n");
+		return WARNING;
+	}
+
+	log_debug(LOGGER, "enviarSolicitudRecursoNivel: Envio t_personaje %d (%s, %c, pos(%d, %d), %d, %s, recurso: %c)", sizeof(t_personaje), personaje.nombre, personaje.id, personaje.posActual.x, personaje.posActual.y, personaje.fd, personaje.nivel, personaje.recurso);
+	if ((ret=enviar_personaje(planner->nivel.fdSocket, &personaje)) != EXITO)
+	{
+		log_error(LOGGER,"enviarSolicitudRecursoNivel: Error al enviar informacion t_personaje en SOLICITUD_RECURSO\n\n");
+		return ret;
+	}
+
+	return ret;
+}
+
+int recibirSolicitudRecurso(int fdPersonaje, header_t header, fd_set *master, t_planificador *planner ) {
+	int ret, se_desconecto;
+	t_personaje personaje;
+
+	log_debug(LOGGER, "recibirSolicitudRecurso: Espero recibir estructura personaje (size:%d)...", header.largo_mensaje);
+	ret = recibir_personaje(fdPersonaje, &personaje, master, &se_desconecto);
+	log_debug(LOGGER, "recibirSolicitudRecurso: Llego: %s (%c) al %s. Solicita recurso: '%c'", personaje.nombre, personaje.id, personaje.nivel, personaje.recurso);
+
+	// TODO hacer algo con la info que llega!
+	if (planner->personajeEjecutando->id == personaje.id)
+		planner->personajeEjecutando->recurso = personaje.recurso;
+
+	// Solicitar Recurso al NIVEL...
+	ret = enviarSolicitudRecursoNivel(header, personaje, planner);
+
+	return ret;
+}
+
+int enviarMovimientoRealizadoNivel(header_t *header, t_personaje *personaje, t_planificador *planner) {
+	int ret;
+	ret = enviar_header(planner->nivel.fdSocket, header);
+	ret = enviar_personaje(planner->nivel.fdSocket, personaje);
+	return ret;
+}
+
+int recibirMovimientoRealizado(int fdPersonaje, header_t header, fd_set *master, t_planificador *planner ){
+	int ret, se_desconecto;
+	t_personaje personaje;
+
+	log_debug(LOGGER, "Espero recibir estructura personaje (size:%d)...", header.largo_mensaje);
+	ret = recibir_personaje(fdPersonaje, &personaje, master, &se_desconecto);
+	log_debug(LOGGER, "Llego: %s (%c) al %s recurso: '%c' se movio a posicion (%d, %d)", personaje.nombre, personaje.id, personaje.nivel, personaje.recurso, personaje.posActual.x, personaje.posActual.y);
+
+	// TODO hacer algo con la info que llega!
+	if (planner->personajeEjecutando->id == personaje.id) {
+		planner->personajeEjecutando->posActual = personaje.posActual;
+		planner->personajeEjecutando->criterio--;
+	}
+
+	// Enviar MovimientoRealizado al NIVEL...
+	ret = enviarMovimientoRealizadoNivel(&header, &personaje, planner);
+
+	return ret;
+
 }
 
 int enviarMsjTurnoConcedido(t_personaje *personaje, char* nivel) {

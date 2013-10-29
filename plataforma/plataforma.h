@@ -68,6 +68,7 @@ void plat_signal_callback_handler(int signum);
 //Listas compartidas
 void agregarPersonajeNuevo(t_personaje* personaje);
 t_personaje* quitarPersonajeNuevoxNivel(char* nivel);
+t_personaje* quitarPersonajexFD(int32_t fdPersonaje);
 void agregarPersonajeEnJuego(t_personaje* personaje);
 void moverPersonajesAFinAnormalxNivel (char *nivel);
 bool existeNivel(char* nivel);
