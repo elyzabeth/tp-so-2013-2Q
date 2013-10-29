@@ -17,10 +17,10 @@
 #pragma pack(1)
 typedef struct {
 	int32_t id;
-	t_posicion posActual;
-	t_posicion posAnterior;
-	// Todos los datos necesarios...
-} t_enemigo;
+	 t_posicion posicionActual;
+	 t_posicion posicionAnterior;
+	 int32_t moverPorX;//flag para q no se muevan por el mismo eje
+ } t_enemigo;
 #pragma pack(0)
 
 #pragma pack(1)
