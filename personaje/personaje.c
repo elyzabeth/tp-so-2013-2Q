@@ -8,7 +8,6 @@
 #include "personaje.h"
 
 int test ();
-int test2();
 
 int main (int argc, char *argv[]) {
 
@@ -21,7 +20,7 @@ int main (int argc, char *argv[]) {
 
 	// TODO agregar logica del personaje
 	//principal(argc, argv);
-	test2 ();
+	test ();
 
 	finalizarPersonaje();
 
@@ -115,18 +114,22 @@ sleep(1);
 					} else {
 						// Si NO es un mensaje del hilo principal por Pipe es un mensaje del proceso Plataforma.
 
-						memset(&header, '\0', sizeof(header_t));
-						recibirHeaderNuevoMsj(sock, &header);
+						initHeader(&header);
+						recibirHeaderNuevoMsj(sock, &header, &master);
 
 						// Recibo el header con el tipo de mensaje
 						switch (header.tipo)
 						{
-							case PERSONAJE_CONECTADO: log_info(LOGGER,"Personaje Conectado");
-								enviarInfoPersonaje(sock);
+							case PERSONAJE_CONECTADO: log_info(LOGGER,"PERSONAJE_CONECTADO");
+								enviarInfoPersonaje2(sock);
 								break;
 
-							case TURNO_CONCEDIDO: log_info(LOGGER,"Turno Concedido");
-								enviarSolicitudUbicacion(sock);
+							case TURNO_CONCEDIDO: log_info(LOGGER,"TURNO_CONCEDIDO");
+								//enviarSolicitudUbicacion(sock);
+								break;
+
+							case RECURSO_CONCEDIDO: log_info(LOGGER,"RECURSO_CONCEDIDO");
+								//enviarSolicitudUbicacion(sock);
 								break;
 
 							case OTRO: log_info(LOGGER, "otro");
@@ -148,60 +151,8 @@ sleep(1);
 }
 
 
+
 int test () {
-
-	int id_proceso;
-	int sock = -1;
-	header_t header;
-
-	char *buffer_header;
-	buffer_header = calloc(1,sizeof(header_t));
-
-	id_proceso = getpid();
-	system("clear");
-
-	log_info(LOGGER,"************** Iniciando Personaje '%s' (PID: %d) ***************\n", personaje.nombre, id_proceso);
-
-	/***************** ME CONECTO Y ARMO MENSAJE DE PRESENTACION *******/
-	log_info(LOGGER,"************** CONECTANDOSE  ***************\n");
-	conectar(personaje.ip_orquestador, personaje.puerto_orquestador, &sock);
-
-
-	if (enviarMsjNuevoPersonaje(sock) != EXITO)
-	{
-		log_error(LOGGER,"Error al enviar header NUEVO_PERSONAJE\n\n");
-		return WARNING;
-	}
-
-	while(1)
-	{
-
-		recibir (sock, buffer_header, sizeof(header_t));
-		memcpy(&header, buffer_header, sizeof(header_t));
-
-		switch (header.tipo) /*recibo estado */
-		{
-			case PERSONAJE_CONECTADO: log_info(LOGGER,"Personaje Conectado");
-				enviarInfoPersonaje(sock);
-			break;
-
-			case TURNO_CONCEDIDO: log_info(LOGGER,"Turno Concedido");
-				enviarSolicitudUbicacion(sock);
-				break;
-
-			case OTRO: log_info(LOGGER, "otro");
-			break;
-
-		}
-
-		sleep(15);
-	}
-
-	return 0;
-}
-
-
-int test2 () {
 
 	int id_proceso;
 	int sock = -1;
@@ -223,9 +174,15 @@ int test2 () {
 	t_objetivosxNivel *oxn = (t_objetivosxNivel*)queue_pop(planDeNiveles);
 	hiloPxN.objetivos = *oxn;
 	proximoObjetivo.simbolo = hiloPxN.objetivos.objetivos[hiloPxN.objetivosConseguidos];
+	hiloPxN.personaje.id = configPersonajeSimbolo();
+	strcpy(hiloPxN.personaje.nombre, configPersonajeNombre());
+	strcpy(hiloPxN.personaje.nivel, oxn->nivel);
+	hiloPxN.personaje.posActual.x = 0;
+	hiloPxN.personaje.posActual.y = 0;
+	hiloPxN.personaje.recurso = proximoObjetivo.simbolo;
 
-	char *buffer_header;
-	buffer_header = calloc(1,sizeof(header_t));
+	//char *buffer_header;
+	//buffer_header = calloc(1,sizeof(header_t));
 
 	id_proceso = getpid();
 	system("clear");
@@ -264,13 +221,14 @@ int test2 () {
 				if (FD_ISSET(i, &read_fds))
 				{
 					if (i == sock) {
-						recibir (sock, buffer_header, sizeof(header_t));
-						memcpy(&header, buffer_header, sizeof(header_t));
+
+						initHeader(&header);
+						recibirHeaderNuevoMsj(sock, &header, &master);
 
 						switch (header.tipo) /*recibo estado */
 						{
 							case PERSONAJE_CONECTADO: log_info(LOGGER,"PERSONAJE_CONECTADO");
-							enviarInfoPersonaje(sock);
+							enviarInfoPersonaje(sock, &hiloPxN);
 							break;
 
 							case TURNO_CONCEDIDO: log_info(LOGGER,"TURNO_CONCEDIDO");
@@ -285,7 +243,7 @@ int test2 () {
 							gestionarRecursoConcedido(sock, &proximoObjetivo, &hiloPxN);
 							break;
 
-							case OTRO: log_info(LOGGER, "otro??");
+							case OTRO: log_info(LOGGER, "que otro??");
 							break;
 
 						}
