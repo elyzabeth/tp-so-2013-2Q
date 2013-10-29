@@ -73,6 +73,7 @@ void ejemploGui ();
 // funciones GUI sincronizadas por semaforo mutex
 void gui_dibujar();
 void gui_moverPersonaje (char id, int x, int y);
+void gui_restarRecurso (char id);
 void gui_crearEnemigo(char id, int x, int y);
 void gui_crearCaja(char id, int x, int y, int instancias);
 void gui_crearPersonaje(char id, int x, int y);
@@ -80,6 +81,7 @@ void gui_borrarItem(char id);
 
 // funciones listas compartidas
 int32_t obternerCantPersonajesEnJuego();
+void moverPersonajeABloqueados(char simboloPersonaje);
 
 //hilos
 void* interbloqueo(t_hiloInterbloqueo *hiloInterbloqueo);
@@ -93,7 +95,8 @@ int enviarMsjAInterbloqueo (char msj);
 int enviarMSJNuevoNivel(int sock);
 int enviarMsjCambiosConfiguracion(int sock);
 int tratarSolicitudUbicacion(int sock, header_t header, fd_set *master);
-
+int tratarSolicitudRecurso(int sock, header_t header, fd_set *master);
+int tratarMovimientoRealizado(int sock, header_t header, fd_set *master);
 
 void rnd(int *x, int max);
 

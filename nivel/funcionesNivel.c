@@ -48,6 +48,12 @@ void gui_moverPersonaje (char id, int x, int y) {
 	pthread_mutex_unlock (&mutexLockGlobalGUI);
 }
 
+void gui_restarRecurso (char id) {
+	pthread_mutex_lock (&mutexLockGlobalGUI);
+	restarRecurso(GUIITEMS, id );
+	pthread_mutex_unlock (&mutexLockGlobalGUI);
+}
+
 void gui_dibujar() {
 	pthread_mutex_lock (&mutexLockGlobalGUI);
 	nivel_gui_dibujar(GUIITEMS, NOMBRENIVEL);
@@ -65,6 +71,26 @@ int32_t obternerCantPersonajesEnJuego() {
 	return cant;
 }
 
+void moverPersonajeABloqueados(char simboloPersonaje) {
+	t_personaje *personaje;
+	bool _remove_x_id (t_personaje *p) {
+		return (p->id == simboloPersonaje);
+	}
+	pthread_mutex_lock (&mutexListaPersonajesEnJuego);
+	personaje = list_remove_by_condition(listaPersonajesEnJuego, (void*)_remove_x_id);
+	pthread_mutex_unlock (&mutexListaPersonajesEnJuego);
+
+	pthread_mutex_lock (&mutexListaPersonajesBloqueados);
+	list_add(listaPersonajesBloqueados, personaje);
+	pthread_mutex_unlock (&mutexListaPersonajesBloqueados);
+
+}
+
+t_caja* obtenerRecurso(char simboloRecurso) {
+	char simbolo[2] = {0};
+	simbolo[0] = simboloRecurso;
+	return (t_caja*)dictionary_get(listaRecursos, simbolo);
+}
 
 /**
  * @NAME: validarPosicionCaja
@@ -434,6 +460,59 @@ int tratarSolicitudUbicacion(int sock, header_t header, fd_set *master) {
 	// TODO agegar personaje a lista de personajes en juego
 	// y a la lista GUIITEMS para graficarlo.
 	gui_crearPersonaje(personaje.id, personaje.posActual.x, personaje.posActual.y);
+
+	return ret;
+}
+
+int tratarSolicitudRecurso(int sock, header_t header, fd_set *master) {
+	int ret, se_desconecto;
+	t_personaje personaje;
+	t_caja *recurso;
+
+	// Si llega un mensaje de SOLICITUD_RECURSO luego espero recibir un t_personaje
+	if ((ret=recibir_personaje(sock, &personaje, master, &se_desconecto)) != EXITO)
+	{
+		log_error(LOGGER,"tratarSolicitudRecurso: ERROR al recibir payload t_personaje en SOLICITUD_RECURSO\n\n");
+		// TODO cancelo o solo retorno??
+		return ret;
+	}
+
+	log_debug(LOGGER,"tratarSolicitudRecurso: Llego: %s, %c, recurso '%c' \n\n", personaje.nombre, personaje.id, personaje.recurso);
+	recurso = obtenerRecurso(personaje.recurso);
+
+	// Envio mensaje RECURSO_CONCEDIDO o RECURSO_DENEGADO al planificador
+	initHeader(&header);
+	if (recurso->INSTANCIAS > 0) {
+		header.tipo = RECURSO_CONCEDIDO;
+		recurso->INSTANCIAS--;
+		gui_restarRecurso(recurso->SIMBOLO);
+
+	} else {
+		header.tipo = RECURSO_DENEGADO;
+		moverPersonajeABloqueados(personaje.id);
+	}
+	header.largo_mensaje = 0;
+
+	if ((ret = enviar_header(sock, &header)) != EXITO) {
+		log_error(LOGGER,"tratarSolicitudRecurso: ERROR al enviar header RECURSO_CONCEDIDO/RECURSO_DENEGADO \n\n");
+		return ret;
+	}
+
+	return ret;
+}
+
+int tratarMovimientoRealizado(int sock, header_t header, fd_set *master) {
+	int ret, se_desconecto;
+	t_personaje personaje;
+
+	// Si llega un mensaje de MOVIMIENTO_REALIZADO luego espero recibir un t_personaje
+	if ((ret=recibir_personaje(sock, &personaje, master, &se_desconecto)) != EXITO)
+	{
+		log_error(LOGGER,"tratarMovimientoRealizado: ERROR al recibir payload t_personaje en MOVIMIENTO_REALIZADO\n\n");
+		// TODO cancelo o solo retorno??
+		return ret;
+	}
+	gui_moverPersonaje(personaje.id, personaje.posActual.x, personaje.posActual.y);
 
 	return ret;
 }
