@@ -12,16 +12,27 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "tad_posicion.h"
+
+#pragma pack(1)
+typedef struct {
+	int32_t id;
+	t_posicion posActual;
+	t_posicion posAnterior;
+	// Todos los datos necesarios...
+} t_enemigo;
+#pragma pack(0)
+
 #pragma pack(1)
 typedef struct enemy {
-	int32_t id;
+	t_enemigo enemigo;
 	pthread_t tid;
 	int32_t fdPipe[2]; // fdPipe[0] de lectura / fdPipe[1] de escritura
 } t_hiloEnemigo;
 #pragma pack(0)
 
-t_hiloEnemigo* crearEnemigo(int32_t idEnemigo);
-void destruirEnemigo (t_hiloEnemigo* enemigo);
+t_hiloEnemigo* crearHiloEnemigo(int32_t idEnemigo);
+void destruirHiloEnemigo (t_hiloEnemigo* enemigo);
 
 
 #endif /* TAD_ENEMIGO_H_ */

@@ -6,6 +6,96 @@
  */
 
 
+
+
+
+
+
+#include <sys/types.h>
+#include <sys/mman.h>
+#include <err.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#include <stddef.h>
+#include <stdlib.h>
+#include <fuse.h>
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
+#include <fcntl.h>
+
+#define GFILEBYTABLE 1024
+#define GFILEBYBLOCK 1
+#define GFILENAMELENGTH 71
+#define GHEADERBLOCKS 1
+#define BLKINDIRECT 1000
+#define BLKLEN 4096 //Tamaño de bloque fijo en bytes
+
+typedef uint32_t ptrGBloque;
+
+typedef struct grasa_header_t { // un bloque
+	unsigned char grasa[5];
+	uint32_t version;
+	uint32_t blk_bitmap;
+	uint32_t size_bitmap; // en bloques
+	unsigned char padding[4073];
+} GHeader;
+
+typedef struct grasa_file_t { // un cuarto de bloque (256 bytes)
+	uint8_t state; // 0: borrado, 1: archivo, 2: directorio
+	unsigned char fname[GFILENAMELENGTH];
+	uint32_t parent_dir_block;
+	uint32_t file_size;
+	uint64_t c_date;
+	uint64_t m_date;
+	ptrGBloque blk_indirect[BLKINDIRECT];
+} GFile;
+
+GHeader HEADER;
+GFile ARCHIVO;
+
+ptrGBloque NODOS[GFILEBYTABLE]; //Son 1024 bloques
+
+
+void levantarHeader() {
+
+	int fd = -1;
+	char *FS;
+
+	if ((fd = open("/tmp/disk.bin", O_RDWR, 0)) == -1)
+		err(1, "open");
+
+	FS = (char*)mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_FILE|MAP_SHARED, fd, 0);
+
+	//LEO header
+	memcpy(&HEADER, FS, sizeof(GHeader));
+
+	printf("HEADER:\n");
+	printf("%s:\n", HEADER.grasa);
+	printf("%d:\n", HEADER.version);
+	printf("%d:\n", HEADER.blk_bitmap);
+	printf("%d:\n", HEADER.size_bitmap);
+
+	munmap(FS, 4096);
+	close(fd);
+
+}
+
+int main () {
+
+	levantarHeader();
+
+	return 0;
+}
+
+
+
+/*
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,7 +122,8 @@ void testNivelGui();
 void testPipe();
 void hiloPipe (void * p);
 
-int main () {
+
+int main_ () {
 
 	//GenerarListaObjetivos();
 	//getStringAsArray();
@@ -263,3 +354,4 @@ void GenerarListaObjetivos() {
 }
 
 
+*/
