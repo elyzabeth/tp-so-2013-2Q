@@ -14,7 +14,6 @@ LIBRARIES :=
 # Every subdirectory with source files must be described here
 SUBDIRS := \
 tads \
-sockets \
 config \
 commons \
 commons/collections \

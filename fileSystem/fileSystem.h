@@ -2,29 +2,33 @@
  * fileSystem.h
  *
  *  Created on: 18/10/2013
- *      Author: arwen
+ *      Author: elyzabeth
  */
 
 #ifndef FILESYSTEM_H_
 #define FILESYSTEM_H_
 
+#define FUSE_USE_VERSION 26
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <stddef.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <fuse.h>
 #include <err.h>
-#include <unistd.h>
+#include <time.h>
+#include <pthread.h>
 #include <sys/types.h>
 #include <sys/mman.h>
-#include <time.h>
+#include <sys/time.h>
 
-// ELIMINAR ESTAS 3 LINEAS!!
-#define DEFAULT_FILE_CONTENT "Hello World!\n"
-#define DEFAULT_FILE_NAME "hello"
-#define DEFAULT_FILE_PATH "/" DEFAULT_FILE_NAME
+
+#include "commons/bitarray.h"
+#include "commons/log.h"
+#include "commons/string.h"
 
 
 
@@ -33,8 +37,13 @@
 #define GFILENAMELENGTH 71
 #define GHEADERBLOCKS 1
 #define BLKINDIRECT 1000
-#define BLKLEN 4096 //Tamaño de bloque fijo en bytes
-#define TAMANIO 10485760
+#define BLKDIRECT 1024
+#define BLKSIZE 4096 //Tamaño de bloque fijo en bytes
+
+
+#define BORRADO 0
+#define ARCHIVO 1
+#define DIRECTORIO 2
 
 typedef uint32_t ptrGBloque;
 
@@ -58,13 +67,22 @@ typedef struct grasa_file_t { // un cuarto de bloque (256 bytes)
 } GFile;
 
 GHeader HEADER;
-GFile ARCHIVO;
-
 char *BITMAP;
-void *TABLANODOS;
+t_bitarray 	*bitvector;
 GFile *FNodo;
 GFile *NODOS[GFILEBYTABLE]; // un array de 1024 posiciones de estructuras de tipo GFile
-
 char *DATOS;
+ptrGBloque blk_direct[BLKDIRECT];
+
+uint32_t TAMANIODISCO; // TODO tamaño del disco, lo debe tomar por parametro
+uint32_t BITMAPBITS;
+uint32_t ADMINBLKS;
+uint32_t MAXBLK;
+
+t_log* LOGGER;
+
+pthread_mutex_t mutexGrasaWrite;
+pthread_mutex_t mutexGrasaBitVector;
+pthread_mutex_t mutexGrasaNodesTable;
 
 #endif /* FILESYSTEM_H_ */
